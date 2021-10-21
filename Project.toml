@@ -2,8 +2,18 @@ name = "NowcastingHuascaran"
 authors = ["Marco Vela"]
 
 [deps]
+AWS = "fbe9abb3-538b-5e4e-ba9e-bc94f4f92ebc"
+AWSCore = "4f1ea46c-232b-54a6-9b17-cc2d0f3e6598"
+AWSS3 = "1c724243-ef5b-51ab-93f4-b0a88ac62a95"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+NetCDF = "30363a11-5582-574a-97bb-aa9a979735b9"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 DrWatson = "2.2.1"
