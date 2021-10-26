@@ -157,24 +157,25 @@ end
 
 
 """
-    download_satellite_data(satellite::String, product::String, start::DateTime, finish::DateTime = endofday(start); path::String, cb::Function) -> Dict{String,String}
+    download_satellite_data([satellite = "goes16"], product::AbstractString, start::DateTime, finish = endofday(start); path=tempdir(), show_progress=true, ntasks=20) -> Dict{String,String}
 
-Downloads files of the given NOAA satellite product between start and finish dates and returns a dictionary consisting of local path and key pairs.
+Downloads files of the given NOAA satellite product between start and finish dates into the specified path and returns a dictionary consisting of local path and key pairs.
 
 ### Keyword arguments
 
 * `path` String setting the path where files will be downloaded
-* `show_progress` Wether to show a progress bar or not
+* `show_progress` Whether to show a progress bar or not
+* `ntasks` number of concurrent tasks for download, increasing this number could result in a "too many files open" error
 
 ### Example
 
     start = now(UTC) - Day(7)
     finish = now(UTC)
-    files = download_satellite_data("goes16", "GLM-L2-LCFA", start, finish; path=tempdir(), cb=println)
+    files = download_satellite_data("goes16", "GLM-L2-LCFA", start, finish)
 
-This downloads the last 7 days files of the product GLM-L2-LCFA from the GOES 16 satellite, storing them in a temporary directory, printing each path.
+This downloads the last 7 days files of the product GLM-L2-LCFA from the GOES 16 satellite, storing them in a temporary directory.
 """
-function download_satellite_data(satellite, product, start, finish::DateTime = endofday(start); path=tempdir(), show_progress=true, ntasks=20)
+function download_satellite_data(satellite::AbstractString, product::AbstractString, start::DateTime, finish::DateTime = endofday(start); path=tempdir(), show_progress=true, ntasks=20)
     keys = list_satellite_data_keys(satellite, product, start, finish)
     files_in_path = sort!(basename.(readdir(path)))
     indices = notin(sort!(basename.(keys)), files_in_path)
@@ -184,6 +185,8 @@ function download_satellite_data(satellite, product, start, finish::DateTime = e
     paths = download_many(["https://noaa-$satellite.s3.amazonaws.com/$key" for key in keys], path, Val(show_progress); ntasks=ntasks)
     Dict(keys .=> paths)
 end
+
+download_satellite_data(product::AbstractString, start::DateTime, args...; kwargs...) = download_satellite_data("goes16", product, start, args...; kwargs...)
 
 @inline function download_many(urls, path, ::Val{false}; ntasks)::Vector{String}
     asyncmap(url -> download(url, joinpath(path, basename(url))), urls; ntasks=ntasks)
