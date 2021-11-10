@@ -1,18 +1,17 @@
 using NetCDF
 using Dates
+using Geodesy
 
 struct GLM_L2_LCFA
     flash_id::Vector{Int16}
     flash_energy::Vector{Int16}
-    flash_lat::Vector{Float32}
-    flash_lon::Vector{Float32}
+    flash_coord::Vector{LLA{Float64}}
     flash_quality_flag::Vector{Int16}
     flash_count::Int32
 
     group_id::Vector{Int32}
     group_energy::Vector{Int16}
-    group_lat::Vector{Float32}
-    group_lon::Vector{Float32}
+    group_coord::Vector{LLA{Float64}}
     group_quality_flag::Vector{Int16}
     group_parent_flash_id::Vector{Int16}
     group_count::Int32
@@ -22,14 +21,20 @@ end
 
 
 function readtostruct(ncfile::NcFile)::GLM_L2_LCFA
+    initial_date_GOES = DateTime(2000, 1, 1, 12)
     k = (Symbol.(Base.keys(ncfile.vars))...,)
     v = (NetCDF.readvar.(Base.values(ncfile.vars))...,)
     t = NamedTuple{k}(v)
-    GLM_L2_LCFA(t.flash_id, t.flash_energy, t.flash_lat, t.flash_lon, t.flash_quality_flag, t.flash_count[],
-                t.group_id, t.group_energy, t.group_lat, t.group_lon, t.group_quality_flag, t.group_parent_flash_id, t.group_count[],
-                Millisecond(t.product_time[] * 1000) + DateTime(2000, 1, 1, 12))
+    flash_coords = @. LLA(Float64(t.flash_lat), Float64(t.flash_lon))
+    group_coords = @. LLA(Float64(t.group_lat), Float64(t.group_lon))
+    GLM_L2_LCFA(t.flash_id, t.flash_energy, flash_coords, t.flash_quality_flag, t.flash_count[],
+                t.group_id, t.group_energy, group_coords, t.group_quality_flag, t.group_parent_flash_id, t.group_count[],
+                Millisecond(t.product_time[] * 1000) + initial_date_GOES)
 end
 
+function collect_tostruct(directory)
+    readtostruct.(NetCDF.open.(joinpath.(directory, readdir(directory))))
+end
 
 function collect_datasets(directory)
     structs = readtostruct.(NetCDF.open.(joinpath.(directory, readdir(directory))))

@@ -189,17 +189,19 @@ end
 download_satellite_data(product::AbstractString, start::DateTime, args...; kwargs...) = download_satellite_data("goes16", product, start, args...; kwargs...)
 
 @inline function download_many(urls, path, ::Val{false}; ntasks)::Vector{String}
+    mkdir(path)
     asyncmap(url -> download(url, joinpath(path, basename(url))), urls; ntasks=ntasks)
 end
 
 @inline function download_many(urls, path, ::Val{true}; ntasks)::Vector{String}
+    mkdir(path)
     length(urls) == 0 && return String[]
     p = Progress(length(urls); desc="Downloading files: ", barglyphs=BarGlyphs('|','█', ['▁' ,'▃' ,'▅' ,'▆', '▇'],' ','|',))
     channel = RemoteChannel(()->Channel{String}(length(urls)), 1)
     fetch(@sync begin
         @async while let 
             filename = take!(channel); 
-            filename != "" && next!(p; showvalues = [(:file, filename)]); 
+            filename != "" && next!(p; showvalues = [(:current_file, filename)]); 
             filename != "" 
             end
         end
