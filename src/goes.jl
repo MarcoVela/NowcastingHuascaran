@@ -15,7 +15,7 @@ function get_products(satellite)::Vector{String}
     q["delimiter"] = "/"
     q["prefix"] = ""
     objects = AWSS3.S3.list_objects_v2("noaa-$satellite", q; aws_config=config)
-    prefixes = get(objects, "CommonPrefixes", [])
+    prefixes::Vector = objects["CommonPrefixes"]
     [x.vals[1][begin:end-1] for x in prefixes]
 end
 
@@ -74,12 +74,11 @@ function getfilekeys(bucket, prefix; region="us-east-1")
 end
 
 
-function show_products()
-    satellites = ["goes16" "goes17"]
-    writedlm(stdout, satellites, "\t\t")
-    println("-"^30)
-    products = hcat(get_products.(satellites)...)
-    writedlm(stdout, products)
+function show_products(io=stdout)
+    satellites = ["goes16","goes17"]
+    cols = [[x, "---", get_products(x)...] for x in satellites]
+    products = hcat(cols...)
+    writedlm(io, products)
 end
 
 
@@ -142,7 +141,7 @@ function notin(arr1::Vector{T}, arr2::Vector{T})::Vector{Int64} where T
     j = 1
     res = Vector(1:length(arr1))
 
-    while (i < length(arr1)) && (j < length(arr2))
+    while (i <= length(arr1)) && (j <= length(arr2))
         if arr1[i] == arr2[j]
             res[i] = 0
             i += 1
@@ -177,6 +176,7 @@ This downloads the last 7 days files of the product GLM-L2-LCFA from the GOES 16
 """
 function download_satellite_data(satellite::AbstractString, product::AbstractString, start::DateTime, finish::DateTime = endofday(start); path=tempdir(), show_progress=true, ntasks=20)
     keys = list_satellite_data_keys(satellite, product, start, finish)
+    mkpath(path)
     files_in_path = sort!(basename.(readdir(path)))
     indices = notin(sort!(basename.(keys)), files_in_path)
     keys = keys[indices]
@@ -189,12 +189,10 @@ end
 download_satellite_data(product::AbstractString, start::DateTime, args...; kwargs...) = download_satellite_data("goes16", product, start, args...; kwargs...)
 
 @inline function download_many(urls, path, ::Val{false}; ntasks)::Vector{String}
-    mkdir(path)
     asyncmap(url -> download(url, joinpath(path, basename(url))), urls; ntasks=ntasks)
 end
 
 @inline function download_many(urls, path, ::Val{true}; ntasks)::Vector{String}
-    mkdir(path)
     length(urls) == 0 && return String[]
     p = Progress(length(urls); desc="Downloading files: ", barglyphs=BarGlyphs('|','█', ['▁' ,'▃' ,'▅' ,'▆', '▇'],' ','|',))
     channel = RemoteChannel(()->Channel{String}(length(urls)), 1)
