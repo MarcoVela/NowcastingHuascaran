@@ -21,11 +21,11 @@ function accumulate!(grid, points)
     scale_factor = 1e3 * grid.spacialresolution
     xs = [p.x for p in points]
     ys = [p.y for p in points]
+    n = size(grid.grid, 1)
 
     dx = @. Base.unsafe_trunc(Int64, (xs - grid.topleftcorner.x) / scale_factor) + 1
-    dy = @. Base.unsafe_trunc(Int64, (grid.topleftcorner.y - ys) / scale_factor) + 1
+    dy = @. n - Base.unsafe_trunc(Int64, (grid.topleftcorner.y - ys) / scale_factor) + 1
 
-    n = size(grid.grid, 1)
     mask = @. (0 < dx <= n) && (0 < dy <= n)
     dx = dx[mask]
     dy = dy[mask]
