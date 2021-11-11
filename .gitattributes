@@ -219,3 +219,5 @@ bin/	binary
 *.R text
       
 
+# notebook files
+*.ipynb linguist-vendored
