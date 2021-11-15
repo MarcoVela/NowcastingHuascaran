@@ -32,8 +32,9 @@ function readtostruct(ncfile::NcFile)::GLM_L2_LCFA
                 Millisecond(t.product_time[] * 1000) + initial_date_GOES)
 end
 
-function collect_tostruct(directory)
-    readtostruct.(NetCDF.open.(joinpath.(directory, readdir(directory))))
+function collect_tostruct(directory; ntasks=20)
+    paths = readdir(directory, join=true)
+    asyncmap((readtostruct ∘ NetCDF.open), paths; ntasks=ntasks)
 end
 
 function collect_datasets(directory)
