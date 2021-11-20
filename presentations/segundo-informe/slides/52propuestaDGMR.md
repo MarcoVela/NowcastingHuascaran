@@ -1,7 +1,7 @@
 ---
 theme: apple-basic
 ---
-<BarTop title="Propuestas de arquitectura - DGMR (precipitación)" />
+<BarTop title="Propuestas de arquitectura - DGMR (precipitación)²" />
 
 <div class="absolute grid grid-cols-2 gap-x-17 top-40 w-215">
   <div>
