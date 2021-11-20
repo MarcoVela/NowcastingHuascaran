@@ -6,10 +6,16 @@ layout: intro
 
 <div class="grid grid-cols-2 gap-x-4">
   <div>
-  Insertar problema de prediccion de video
+    <h3>NOAA GOES16/17</h3>
+    <ul class="mt-7">
+      <li>Baja complejidad computacional</li>
+    </ul>
   </div>
   <div>
-  Insertar problema de predicción de radar
+    <h3>NASA GPM</h3>
+    <ul class="mt-7">
+      <li>Baja complejidad computacional</li>
+    </ul>
   </div>
 </div>
 

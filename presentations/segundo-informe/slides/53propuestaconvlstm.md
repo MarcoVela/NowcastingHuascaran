@@ -1,7 +1,7 @@
 ---
 theme: apple-basic
 ---
-<BarTop title="Propuestas de arquitectura - ConvLSTM (GLM)" />
+<BarTop title="Propuestas de arquitectura - ConvLSTM (GLM)³" />
 
 <div class="absolute grid grid-cols-2 gap-x-17 top-40 w-215">
   <div>

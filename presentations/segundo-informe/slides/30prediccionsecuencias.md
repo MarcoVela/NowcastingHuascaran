@@ -17,7 +17,7 @@ theme: default
   <div 
     v-click
     class="w-full h-full" 
-    style="color: white; background-image: url('../assets/20180713_ia_fed.gif'); background-repeat: no-repeat; background-position: left center; background-size: 25em;">
+    style="color: white; background-image: url('https://satelliteliaisonblog.com/wp-content/uploads/2018/07/20180713_ia_fed.gif'); background-repeat: no-repeat; background-position: left center; background-size: 25em;">
   </div>
 </div>
 
