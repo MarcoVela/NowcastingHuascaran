@@ -2,16 +2,12 @@
 theme: apple-basic
 layout: intro
 ---
-<BarTop title="Arquitecturas de red neuronal - Transformer" />
+<BarTop title="Referencias" />
 
-<div class="grid grid-cols-2 gap-x-4">
-  <div>
-  Insertar problema de prediccion de video
-  </div>
-  <div>
-  Insertar problema de predicción de radar
-  </div>
-</div>
+[1] Sønderby, C. K., Espeholt, L., Heek, J., Dehghani, M., Oliver, A., Salimans, T., ... & Kalchbrenner, N. (2020). Metnet: A neural weather model for precipitation forecasting. arXiv preprint arXiv:2003.12140.
 
+[2] Ravuri, S., Lenc, K., Willson, M. et al. Skilful precipitation nowcasting using deep generative models of radar. Nature 597, 672–677 (2021).
+
+[3] Su, J., Byeon, W., Kossaifi, J., Huang, F., Kautz, J., & Anandkumar, A. (2020). Convolutional tensor-train lstm for spatio-temporal learning. arXiv preprint arXiv:2002.09131.
 
 <BarBottom />

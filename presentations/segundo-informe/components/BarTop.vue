@@ -19,9 +19,10 @@ export default {
 
 <style scoped>
 .bg-barTop {
-    background-color: rgb(0, 162, 255);
+    background-color: rgb(255, 196, 0);
 }
 .text-big {
     font-size: 1.4rem;
+    font-weight: bolder;
 }
 </style>
