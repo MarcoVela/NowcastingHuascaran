@@ -3,12 +3,11 @@ theme: apple-basic
 ---
 <BarTop title="Arquitecturas de red neuronal - GAN" />
 
-<div class="absolute grid grid-cols-2 w-220 h-120">
+<div class="absolute grid grid-cols-2 w-220 h-120 mt-7">
   <div class="my-auto">
-    <h3>Generative adversarial network</h3>
+    <h3>Generative Adversarial Network</h3>
     <ul class="mt-4">
       <li>Aprendizaje mediante competición</li>
-      <li>Permite aprendizaje no supervisado</li>
     </ul>
   </div>
   <div 

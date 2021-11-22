@@ -5,13 +5,13 @@ layout: intro
 
 <BarTop title="Agenda" />
 
-* ***Secuencias espaciotemporales***
+* Secuencias espaciotemporales
 * Arquitecturas de red neuronal
     * ConvRNN
     * GAN
-    * Transformer
+    * Transforme
 * Propuestas de arquitectura para red neuronal
-* Conjuntos de datos
+* ***Conjuntos de datos***
 
 <BarBottom />
 

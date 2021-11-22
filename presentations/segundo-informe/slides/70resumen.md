@@ -5,7 +5,7 @@ layout: intro
 <BarTop title="Resumen" />
 
 - Existen diversas arquitecturas de deep learning que pueden capturar relaciones espacio temporales.
-- Existen arquitecturas exitosas en la tarea de predicción de precipitación a corto plazo, pero los datos de precipitación son muy significativos para esta tarea.
-- También existen arquitecturas que pueden ser empleadas para la predicción de parametros satelitales.
+- Es posible deep learning para la predicción de información satelital (FED o canales del ABI).
+- Es posible realizar predicción de precipitación usando unicamente datos satelitales, pero de todas formas requiere información de precipitación para predecir.
 
 <BarBottom />

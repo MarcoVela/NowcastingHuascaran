@@ -22,7 +22,7 @@ export default {
 
 <style scoped>
 .bg-barBottom {
-    background-color: rgb(255, 196, 0);
+    background-color: rgb(255, 191, 0);
 }
 .text-peq {
     font-size: 0.75rem;

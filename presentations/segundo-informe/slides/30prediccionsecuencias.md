@@ -3,7 +3,7 @@ theme: default
 ---
 <BarTop title="Secuencias espaciotemporales"/>
 
-<div class="absolute grid grid-cols-2 w-220 h-120">
+<div class="absolute grid grid-cols-2 w-220 h-120 mt-4">
   <div class="my-auto">
     <ul>
       <li>Dinámica de los oceanos</li>
@@ -15,7 +15,6 @@ theme: default
     </ul>
   </div>
   <div 
-    v-click
     class="w-full h-full" 
     style="color: white; background-image: url('https://satelliteliaisonblog.com/wp-content/uploads/2018/07/20180713_ia_fed.gif'); background-repeat: no-repeat; background-position: left center; background-size: 25em;">
   </div>

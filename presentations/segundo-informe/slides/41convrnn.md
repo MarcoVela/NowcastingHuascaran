@@ -3,7 +3,7 @@ theme: apple-basic
 ---
 <BarTop title="Arquitecturas de red neuronal - ConvRNN" />
 
-  <div class="grid grid-cols-2 w-full h-full gap-x-7">
+  <div class="grid grid-cols-2 w-full h-full gap-x-7 mt-7">
     <div class="grid grid-rows-2 w-full h-full gap-y-7">
       <div class="my-auto">
         <h3>Convolutional</h3>

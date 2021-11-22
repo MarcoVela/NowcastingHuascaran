@@ -7,11 +7,11 @@ layout: intro
 
 * Secuencias espaciotemporales
 * Arquitecturas de red neuronal
-    * ConvRNN (y variantes)
+    * ConvRNN
     * GAN
     * Transforme
 * ***Propuestas de arquitectura para red neuronal***
-* Conjunto de datos
+* Conjuntos de datos
 
 <BarBottom />
 

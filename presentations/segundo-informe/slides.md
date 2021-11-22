@@ -42,24 +42,24 @@ src: ./slides/43transformer.md
 src: ./slides/50overview.md
 ---
 
-
 ---
-src: ./slides/51propuestametnet.md
+src: ./slides/51propuestaconvlstm.md
 ---
-
 
 ---
 src: ./slides/52propuestaDGMR.md
 ---
 
+---
+src: ./slides/53propuestametnet.md
+---
 
 ---
-src: ./slides/53propuestaconvlstm.md
+src: ./slides/60overview.md
 ---
 
-
 ---
-src: ./slides/60datos.md
+src: ./slides/61datos.md
 ---
 
 
