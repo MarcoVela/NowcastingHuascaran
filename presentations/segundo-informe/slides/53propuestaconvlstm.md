@@ -14,6 +14,7 @@ theme: apple-basic
     <h3>Desventajas</h3>
     <ul class="mt-7">
       <li>Pronosticos difuminados en secuencias largas</li>
+      <li>Captura unicamente información de un paso previo</li>
     </ul>
   </div>
 </div>

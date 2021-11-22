@@ -8,13 +8,14 @@ layout: intro
   <div>
     <h3>NOAA GOES16/17</h3>
     <ul class="mt-7">
-      <li>Baja complejidad computacional</li>
+      <li>Parametros de FED</li>
+      <li>Parametros de ABI</li>
     </ul>
   </div>
   <div>
-    <h3>NASA GPM</h3>
+    <h3>NASA GPM IMERG</h3>
     <ul class="mt-7">
-      <li>Baja complejidad computacional</li>
+      <li>Datos de precipitacion</li>
     </ul>
   </div>
 </div>
