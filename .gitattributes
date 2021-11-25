@@ -88,7 +88,7 @@ bin/	binary
 *.md text diff=markdown
 *.adoc text
 *.textile text
-*.tex 	text diff=tex 
+
 *.mustache text
 *.csv text
 *.tab text
@@ -223,4 +223,4 @@ bin/	binary
 *.ipynb linguist-vendored
 
 # tex files
-.tex linguist-vendored
+*.tex linguist-vendored
