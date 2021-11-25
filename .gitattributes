@@ -88,7 +88,6 @@ bin/	binary
 *.md text diff=markdown
 *.adoc text
 *.textile text
-*.tex 	text diff=tex 
 *.mustache text
 *.csv text
 *.tab text
@@ -223,6 +222,6 @@ bin/	binary
 *.ipynb linguist-vendored
 
 # papers
-papers/tesis-pregrado/**.tex linguist-vendored
-papers/tesis-pregrado/**.cls linguist-vendored
+*.tex linguist-vendored
+*.cls linguist-vendored
 
