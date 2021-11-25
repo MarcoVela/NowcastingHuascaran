@@ -222,8 +222,6 @@ bin/	binary
 *.ipynb linguist-vendored
 
 # papers
-*.tex linguist-vendored
-*.cls linguist-vendored
-*.bib linguist-vendored
+papers/* linguist-vendored
 
 
