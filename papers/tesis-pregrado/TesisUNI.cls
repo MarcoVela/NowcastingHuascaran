@@ -816,30 +816,31 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-
-\renewcommand{\headrulewidth}{0.5 pt}
-\renewcommand{\footrulewidth}{0.5 pt}
+\renewcommand{\headrulewidth}{0pt}
 
 
-\lhead[]{\textit{\scriptsize UNIVERSIDAD NACIONAL DE INGENIERÍA \\ \scriptsize{\@facultad}}}
+%\renewcommand{\headrulewidth}{0.5 pt}
+%\renewcommand{\footrulewidth}{0.5 pt}
+
+
+%\lhead[]{\textit{\scriptsize UNIVERSIDAD NACIONAL DE INGENIERÍA \\ \scriptsize{\@facultad}}}
 \rhead[]{\textit{\scriptsize \leftmark}}
 
-\lfoot[]{\textit{\scriptsize {\@title} \\ Bach. {\@author}}}
+% \lfoot[]{\textit{\scriptsize {\@title} \\ Bach. {\@author}}}
 \rfoot[]{\small \thepage}
 %---------------------------------------
 
-
 \fancypagestyle{plain}{
 \fancyhf{}
-\renewcommand{\headrulewidth}{0.5 pt}
-\renewcommand{\footrulewidth}{0.5 pt}
+%\renewcommand{\headrulewidth}{0.5 pt}
+%\renewcommand{\footrulewidth}{0.5 pt}
 
 
-\lhead[]{\textit{\scriptsize UNIVERSIDAD NACIONAL DE INGENIERÍA \\ \scriptsize {\@facultad}}}
+%\lhead[]{\textit{\scriptsize UNIVERSIDAD NACIONAL DE INGENIERÍA \\ \scriptsize {\@facultad}}}
 \rhead[]{\textit{\scriptsize \leftmark}}
 
 
-\lfoot[]{\textit{\scriptsize {\@title} \\ Bach. {\@author}}}
+%\lfoot[]{\textit{\scriptsize {\@title} \\ Bach. {\@author}}}
 \rfoot[]{\small \thepage}
 }
 %----------------------------------------------

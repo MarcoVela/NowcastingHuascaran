@@ -2,8 +2,8 @@
 \bibliographystyle{apacite}
 \setlength{\bibsep}{5pt plus 0.3ex} %Espaciamiento en la bibliografía
 \setcounter{secnumdepth}{3} % Numera los subsubsecciones
-\usepackage[T1]{fontenc}
-\usepackage[spanish, es-tabla]{babel} %% reemplaza "cuadro" por "tabla"
+\usepackage[OT1]{fontenc}
+\usepackage[spanish, es-tabla, es-ucroman]{babel} %% reemplaza "cuadro" por "tabla"
 \decimalpoint  %Cambia coma por punto
 \usepackage{mathptmx}
 \usepackage{layouts} %Saber ancho de hoja.
@@ -22,11 +22,13 @@
 \usepackage{tocloft} %Titulos de ÍNDICES
 \usepackage[colorlinks=true,linkcolor=negro,citecolor = negro]{hyperref}
 \usepackage[mathbf=sym]{unicode-math} % Mantener fuentes matemáticas
+\setmathfont{Old Standard}
 \makeatletter  %Comando para REDUCIR ERRORES
 \usepackage{multirow} % Agregar TABLAS 
 \usepackage{array} % Dar formato a las TABLAS
 \usepackage{subcaption} % Insertar SubImagenes
 \usepackage{tikz} % Diagrama de Flujo
+\usepackage{svg} % Figuras svg
 \usetikzlibrary{calc,positioning,shapes.geometric,shapes.symbols,shapes.misc}
 
 % Insertar formas para diagramas de flujo
@@ -183,26 +185,29 @@
 %Escribir los INFORMACIÓN PERSONAL Y DEL TRABAJO
 
 %Autor para PIE DE PÁGINA (Respetar mayusculas y minisculas)
-\author{Nombre1 Nombre2 Apellido1 Apellido2}
+\author{Marco Antonio Vela Rodriguez}
 
 %Autor para CARÁTULA (Siempre en mayuscula y sin saltos de linea)
-\authorcaratula{NOMBRE1 NOMBRE2 APELLIDO1 APELLIDO2}
+\authorcaratula{MARCO ANTONIO VELA RODRIGUEZ}
 
 %Título en para el PIE DE PÁGINA (Agregar salto de línea de ser necesario)
-\title{Xxxxxxxxxxx Título de la Tesis Xxxxxxxxxxx}
+\title{
+  Desarrollo de un sistema basado en aprendizaje profundo para la predicción del desplazamiento y evolución de tormentas eléctricas en el territorio peruano
+}
 
 %Título para CARÁTULA (Siempre en mayuscula y sin saltos de linea)
-\titlecaratula{XXXXXXXXXXXX TÍTULO DE LA TESIS XXXXXXXXXXXXXX}
+\titlecaratula{
+  DESARROLLO DE UN SISTEMA BASADO EN APRENDIZAJE PROFUNDO PARA LA PREDICCIÓN DEL DESPLAZAMIENTO Y EVOLUCIÓN DE TORMENTAS ELÉCTRICAS EN EL TERRITORIO PERUANO
+}
 
 %Nombre de la FACULTAD (Siempre en mayuscula)
-\facultad{FACULTAD DE INGENIERÍA CIVIL}
+\facultad{FACULTAD DE INGENIERÍA INDUSTRIAL Y DE SISTEMAS}
 
 %Para obtener el título profesional de ... (Siempre en mayuscula)
-\grado{INGENIERO CIVIL}
+\grado{INGENIERO DE SISTEMAS}
 
 %Asesor para CARÁTULA (Siempre en mayuscula y sin saltos de linea)
-\asesor{DR. NOMBRE DEL ASESOR}
+\asesor{DR. GLEN DARIO RODRIGUEZ RAFAEL}
 
 %AÑO para CARÁTULA
 \yyearr{2021}
-
