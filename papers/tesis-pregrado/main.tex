@@ -42,10 +42,12 @@
 	\renewcommand\listfigurename{\centering LISTA DE FIGURAS}
 	\renewcommand\listtablename{\centering LISTA DE TABLAS}
 
-	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
+	\newpage
+	%\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
 	{\normalsize\listoftables}
-		
-	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
+
+	\newpage
+	%\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
 	{\normalsize\listoffigures}
 	
 	\include{1_7_SIMBOLOS/Simbolos}
