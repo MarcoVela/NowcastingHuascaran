@@ -32,20 +32,18 @@
 
 	\include{1_4_RESUMEN/Resumen}
 		
-	\include{1_5_ABSTRACT/Abstract}
-
-	\include{1_6_PROLOGO/Prologo} 
-	
 	
 	%Cambiar nombre, crear ÍNDICE DE FIGURAS Y TABLAS
 	
 	\renewcommand\listfigurename{\centering LISTA DE FIGURAS}
 	\renewcommand\listtablename{\centering LISTA DE TABLAS}
 
-	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
+	\newpage
+	%\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listtablename}
 	{\normalsize\listoftables}
-		
-	\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
+
+	\newpage
+	%\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listfigurename}
 	{\normalsize\listoffigures}
 	
 	\include{1_7_SIMBOLOS/Simbolos}
