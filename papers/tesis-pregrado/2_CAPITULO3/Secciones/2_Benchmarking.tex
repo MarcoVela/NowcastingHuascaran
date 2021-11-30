@@ -1,0 +1,108 @@
+\section{Benchmarking}
+
+Se realizará una comparación entre los métodos descritos en el estado del arte. 
+Se utilizarán criterios con pesos asignados siguiendo el Proceso Analítico 
+Jerarquico (Analytical Hierarchical Process, AHP).
+		
+\subsection{Criterios}
+
+\begin{itemize}
+  \item \textbf{C1. Complejidad de entrenamiento:} Es el tiempo que 
+  el modelo necesita para generalizar los datos, estimado en base a la 
+  complejidad del modelo por usando el númeo de parámetros como indicador.
+  \item \textbf{C2. Desempeño a muy corto plazo:} Es el desempeño definido por 
+  las métricas de evaluación pertinentes.
+  \item \textbf{C3. Explicabilidad:} Es la capacidad de reconocer los factores 
+  que determinan el resultado del modelo. Es importante para poder obtener un 
+  mayor conocimiento del fenómeno de estudio.
+  \item \textbf{C4. Replicabilidad:} Es la disponibilidad de recursos que 
+  soporten el desarrollo de un tipo de método y su uso con los datos 
+  disponibles.
+\end{itemize}
+
+\subsection{Cálculo de pesos}
+Se utilizó la escala de Saaty (ver tabla \ref{tab:escala_saaty}), para poder 
+determinar la importancia relativa de los criterios respecto a ellos mismos.
+
+\begin{table}[H]
+  \centering
+  \caption{Escala de Saaty}
+  \begin{tabular}{ll}
+  \textbf{Intensidad} & \textbf{Definición}    \\ \hline
+  1                   & Igual importancia      \\
+  3                   & Moderada importancia   \\
+  5                   & Importancia fuerte     \\
+  7                   & Importancia muy fuerte \\
+  9                   & Importancia extrema    \\
+  2, 4, 6, 7          & Valores intermedios   
+  \end{tabular}
+  \label{tab:escala_saaty}
+\end{table}
+
+
+\begin{table}[H]
+  \centering
+  \caption{Matriz de comparaciones pareadas.}
+  \begin{tabular}{l|cccc}
+  \hline
+  \textbf{}     & \multicolumn{1}{l}{C1} & \multicolumn{1}{l}{C2} & \multicolumn{1}{l}{C3} & \multicolumn{1}{l}{C4} \\ \hline
+  C1 & 1   & 3   & 5   & 1/5 \\
+  C2 & 1/3 & 1   & 3   & 1/3 \\
+  C3 & 1/5 & 1/3 & 1   & 3   \\
+  C4 & 5   & 3   & 1/3 & 1   \\ \hline
+  \textbf{Suma} & 98/15 = 6.53           & 22/3 = 7.33            & 28/3 = 9.33            & 68/15 = 4.53           \\ \hline
+  \end{tabular}
+  \label{tab:comp_pareadas}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Cálculo de los pesos.}
+  \begin{tabular}{l|cccc|l}
+  \hline
+  \textbf{} & \multicolumn{1}{l}{C1} & \multicolumn{1}{l}{C2} & \multicolumn{1}{l}{C3} & \multicolumn{1}{l|}{C4} & \textbf{Peso} \\ \hline
+  C1 & 0.153  & 0.409  & 0.536  & 0.0442 & 0.2855 \\
+  C2 & 0.0510 & 0.136  & 0.322  & 0.0736 & 0.1457 \\
+  C3 & 0.0306 & 0.0455 & 0.107  & 0.662  & 0.2113 \\
+  C4 & 0.766  & 0.409  & 0.0357 & 0.221  & 0.358  \\ \hline
+  \end{tabular}
+  \label{tab:comp_pareadas_norm}
+\end{table}
+
+De la tabla \ref{tab:comp_pareadas_norm} obtenemos que el criterio 4 
+(Replicabilidad) es el más importante, seguido de Complejidad de entrenamiento, 
+Explicabilidad y finalmente el desempeño a corto plazo. Esto se dió debido a 
+que el stakeholder valora más una solución funcional que pueda ir mejorando con 
+el tiempo a una solución compleja cuya implementación y explicabilidad sea 
+baja.
+
+\subsection{Evaluación}
+Las alternativas a evaluar son:
+
+\begin{itemize}
+  \item \textbf{A1. DGM}
+  \item \textbf{A2. 2D \& 3D CNN} 
+  \item \textbf{A3. ConvLSTM \& TrajGRU} 
+  \item \textbf{A4. Atention Based}
+\end{itemize}
+
+\begin{table}[H]
+  \centering
+  \caption{Evaluación de las alternativas.}
+  \begin{tabular}{l|ccccl}
+  \hline
+  \textbf{}            & \multicolumn{1}{l}{C1}     & \multicolumn{1}{l}{C2}     & \multicolumn{1}{l}{C3}     & \multicolumn{1}{l}{C4}    & Total \\ \hline
+  A1 & 0.0833 & 0.324  & 0.0928 & 0.0657  & 0.1141  \\
+  A2 & 0.333  & 0.221  & 0.3571 & 0.3947  & 0.3440  \\
+  A3 & 0.416  & 0.0567 & 0.4285 & 0.4802  & 0.3894  \\
+  A4 & 0.166  & 0.396  & 0.1214 & 0.05921 & 0.15193 \\ \hline
+  \textbf{Ponderación} & \multicolumn{1}{l}{0.2855} & \multicolumn{1}{l}{0.1457} & \multicolumn{1}{l}{0.2113} & \multicolumn{1}{l}{0.358} &       \\ \hline
+  \end{tabular}
+  \label{tab:evaluacion}
+
+\end{table}
+
+\subsection{Decisión}
+
+De acuerdo a los puntajes obtenidos en la tabla \ref{tab:evaluacion}, se elige 
+la alternativa 3 (ConvLSTM \& TrajGRU).
