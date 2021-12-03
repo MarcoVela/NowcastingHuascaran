@@ -9,6 +9,10 @@ plots
 _research
 
 ################################################################################
+#                                  Data files                                  #
+################################################################################
+
+################################################################################
 #                                    Julia                                     #
 ################################################################################
 
@@ -414,3 +418,5 @@ $RECYCLE.BIN/
 ## Acknowledgements
 # Many thanks to `https://gitignore.io/`, written and maintained by Joe Blau, which contributed much material to this gitignore file.
 
+# GMT files
+*.history
