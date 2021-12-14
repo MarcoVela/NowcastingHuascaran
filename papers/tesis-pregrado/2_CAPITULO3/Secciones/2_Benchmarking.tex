@@ -1,5 +1,6 @@
 \section{Benchmarking}
 
+%TODO: Corregir pesos de factores y validar
 Se realizará una comparación entre los métodos descritos en el estado del arte. 
 Se utilizarán criterios con pesos asignados siguiendo el Proceso Analítico 
 Jerarquico (Analytical Hierarchical Process, AHP).
@@ -15,9 +16,8 @@ Jerarquico (Analytical Hierarchical Process, AHP).
   \item \textbf{C3. Explicabilidad:} Es la capacidad de reconocer los factores 
   que determinan el resultado del modelo. Es importante para poder obtener un 
   mayor conocimiento del fenómeno de estudio.
-  \item \textbf{C4. Replicabilidad:} Es la disponibilidad de recursos que 
-  soporten el desarrollo de un tipo de método y su uso con los datos 
-  disponibles.
+  \item \textbf{C4. Replicabilidad:} Es la disponibilidad de código fuente 
+  y datasets que soporten el desarrollo de un tipo de método.
 \end{itemize}
 
 \subsection{Cálculo de pesos}
@@ -26,8 +26,8 @@ determinar la importancia relativa de los criterios respecto a ellos mismos.
 
 \begin{table}[H]
   \centering
-  \caption{Escala de Saaty}
-  \begin{tabular}{ll}
+  \caption[Escala de Saaty]{Escala de Saaty.}
+  \begin{tabular}{l|l}
   \textbf{Intensidad} & \textbf{Definición}    \\ \hline
   1                   & Igual importancia      \\
   3                   & Moderada importancia   \\
@@ -43,35 +43,30 @@ determinar la importancia relativa de los criterios respecto a ellos mismos.
 \begin{table}[H]
   \centering
   \caption{Matriz de comparaciones pareadas.}
-  \begin{tabular}{l|cccc}
-  \hline
-  \textbf{}     & \multicolumn{1}{l}{C1} & \multicolumn{1}{l}{C2} & \multicolumn{1}{l}{C3} & \multicolumn{1}{l}{C4} \\ \hline
-  C1 & 1   & 3   & 5   & 1/5 \\
-  C2 & 1/3 & 1   & 3   & 1/3 \\
-  C3 & 1/5 & 1/3 & 1   & 3   \\
-  C4 & 5   & 3   & 1/3 & 1   \\ \hline
-  \textbf{Suma} & 98/15 = 6.53           & 22/3 = 7.33            & 28/3 = 9.33            & 68/15 = 4.53           \\ \hline
+  \begin{tabular}{l|cccc|c|c}
+     & C1 & C2  & C3  & C4  & \textbf{Suma} & \textbf{Peso}  \\ \hline
+  C1 & 1  & 1/3 & 1/5 & 1/8 &  1.658 & 0.057\\
+  C2 & 3  & 1   & 1/2 & 1/3 &  4.83  & 0.167\\
+  C3 & 5  & 2   & 1   & 1/2 &  8.5   & 0.293\\
+  C4 & 8  & 3   & 2   & 1   &  14    & 0.483\\ \hline
+  \textbf{Suma} & 17     & 6.333       & 3.7       & 1.958 & 28.99  & 1.00   \\
   \end{tabular}
   \label{tab:comp_pareadas}
 \end{table}
 
-\begin{table}[H]
-  \centering
-  \caption{Cálculo de los pesos.}
-  \begin{tabular}{l|cccc|l}
-  \hline
-  \textbf{} & \multicolumn{1}{l}{C1} & \multicolumn{1}{l}{C2} & \multicolumn{1}{l}{C3} & \multicolumn{1}{l|}{C4} & \textbf{Peso} \\ \hline
-  C1 & 0.153  & 0.409  & 0.536  & 0.0442 & 0.2855 \\
-  C2 & 0.0510 & 0.136  & 0.322  & 0.0736 & 0.1457 \\
-  C3 & 0.0306 & 0.0455 & 0.107  & 0.662  & 0.2113 \\
-  C4 & 0.766  & 0.409  & 0.0357 & 0.221  & 0.358  \\ \hline
-  \end{tabular}
-  \label{tab:comp_pareadas_norm}
-\end{table}
+Se calculará el indice de consistencia ($CI$) de la siguiente forma:
 
-De la tabla \ref{tab:comp_pareadas_norm} obtenemos que el criterio 4 
-(Replicabilidad) es el más importante, seguido de Complejidad de entrenamiento, 
-Explicabilidad y finalmente el desempeño a corto plazo. Esto se dió debido a 
+$$CI = \frac{\lambda_{max}-n}{n-1}$$
+
+para $n = 4$ nuestra asignación de pesos será consistente si $\frac{CI}{0.9} < 0.1$.
+
+De la tabla \ref{tab:comp_pareadas} obtenemos $\lambda_{max} = 4.0587$, y 
+$CI = 0.0196$, tenemos entonces que $\frac{CI}{0.9} \approx 0.022 < 0.1$ y 
+nuestra asignación es consistente.
+
+En la tabla \ref{tab:comp_pareadas} obtenemos que el criterio 4 
+(Replicabilidad) es el más importante, seguido de Explicabilidad, Desempeño a 
+corto plazo y finalmente complejidad de entrenamiento. Esto se dió debido a 
 que el stakeholder valora más una solución funcional que pueda ir mejorando con 
 el tiempo a una solución compleja cuya implementación y explicabilidad sea 
 baja.
@@ -86,17 +81,19 @@ Las alternativas a evaluar son:
   \item \textbf{A4. Atention Based}
 \end{itemize}
 
+Para la evaluación entre alternativas usaremos una escala de 0 a 5 donde 0 
+indica la peor opción para el criterio y 5 la mejor.
+
 \begin{table}[H]
   \centering
   \caption{Evaluación de las alternativas.}
-  \begin{tabular}{l|ccccl}
-  \hline
-  \textbf{}            & \multicolumn{1}{l}{C1}     & \multicolumn{1}{l}{C2}     & \multicolumn{1}{l}{C3}     & \multicolumn{1}{l}{C4}    & Total \\ \hline
-  A1 & 0.0833 & 0.324  & 0.0928 & 0.0657  & 0.1141  \\
-  A2 & 0.333  & 0.221  & 0.3571 & 0.3947  & 0.3440  \\
-  A3 & 0.416  & 0.0567 & 0.4285 & 0.4802  & 0.3894  \\
-  A4 & 0.166  & 0.396  & 0.1214 & 0.05921 & 0.15193 \\ \hline
-  \textbf{Ponderación} & \multicolumn{1}{l}{0.2855} & \multicolumn{1}{l}{0.1457} & \multicolumn{1}{l}{0.2113} & \multicolumn{1}{l}{0.358} &       \\ \hline
+  \begin{tabular}{l|l|llll}
+        & Pesos & A1   & A2   & A3   & A4   \\ \hline
+  C1    & 0.057 & 1    & 4    & 4    & 2    \\
+  C2    & 0.167 & 4    & 1    & 3    & 4    \\
+  C3    & 0.293 & 2    & 4    & 4    & 2    \\
+  C4    & 0.483 & 0    & 3    & 3    & 0    \\ \hline
+  Total & 1     & 1.31 & 3.02 & 3.35 & 1.37
   \end{tabular}
   \label{tab:evaluacion}
 
