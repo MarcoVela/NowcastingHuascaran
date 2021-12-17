@@ -11,7 +11,7 @@ READER_PROCS = 2
 
 REESCALE_PROCS = 1
 
-STORE_PROCS = 3
+STORE_PROCS = 2
 
 
 if nprocs() < READER_PROCS+REESCALE_PROCS+STORE_PROCS
@@ -252,8 +252,8 @@ function main()
   progress = Progress(length(paths) ;desc="Recreating datasets...", showspeed=true)
 
   paths_chan = RemoteChannel(() -> Channel{Tuple{String,String}}(length(paths)))
-  reescaled_chan = RemoteChannel(() -> Channel{OwnDataset}(10_000))
-  own_dataset_chan = RemoteChannel(() -> Channel{OwnDataset}(10_000))
+  reescaled_chan = RemoteChannel(() -> Channel{OwnDataset}(1_000))
+  own_dataset_chan = RemoteChannel(() -> Channel{OwnDataset}(1_000))
   finish_chan = RemoteChannel(() -> Channel{Bool}(length(paths)))
 
   for x in paths
