@@ -176,25 +176,32 @@ This downloads the last 7 days files of the product GLM-L2-LCFA from the GOES 16
 """
 function download_satellite_data(satellite::AbstractString, product::AbstractString, start::DateTime, finish::DateTime = endofday(start); path=tempdir(), show_progress=true, ntasks=20)
     keys = list_satellite_data_keys(satellite, product, start, finish)
-    mkpath(path)
-    files_in_path = sort!(basename.(readdir(path)))
+    first_slash_idx = findfirst('/', first(keys))
+    paths = unique(dirname.(joinpath.(path, [k[first_slash_idx+1:end] for k in keys])))
+    for p in paths
+        if !ispath(p)
+            mkpath(p)
+        end
+    end
+    files_in_path = sort!(basename.(vcat(readdir.(paths)...)))
     indices = notin(sort!(basename.(keys)), files_in_path)
     keys = keys[indices]
     #filter!(key -> !(basename(key) ∈ files_in_path), keys)
     length(keys) == 0 && return Dict{String,String}()
-    paths = download_many(["https://noaa-$satellite.s3.amazonaws.com/$key" for key in keys], path, Val(show_progress); ntasks=ntasks)
-    Dict(keys .=> paths)
+    replace_path = "https://noaa-$satellite.s3.amazonaws.com/$(first(keys)[begin:first_slash_idx])"
+    paths = download_many(["https://noaa-$satellite.s3.amazonaws.com/$key" for key in keys], path, Val(show_progress); ntasks=ntasks, replace_path=replace_path)
+    paths
 end
 
 download_satellite_data(product::AbstractString, start::DateTime, args...; kwargs...) = download_satellite_data("goes16", product, start, args...; kwargs...)
 
-@inline function download_many(urls, path, ::Val{false}; ntasks)::Vector{String}
-    asyncmap(url -> download(url, joinpath(path, basename(url))), urls; ntasks=ntasks)
+@inline function download_many(urls, path, ::Val{false}; ntasks, replace_path="")::Vector{String}
+    asyncmap(url -> download(url, joinpath(path, replace(url, replace_path => ""))), urls; ntasks=ntasks)
 end
 
-@inline function download_many(urls, path, ::Val{true}; ntasks)::Vector{String}
+@inline function download_many(urls, path, ::Val{true}; ntasks, replace_path="")::Vector{String}
     length(urls) == 0 && return String[]
-    p = Progress(length(urls); desc="Downloading files: ", barglyphs=BarGlyphs('|','█', ['▁' ,'▃' ,'▅' ,'▆', '▇'],' ','|',))
+    p = Progress(length(urls); desc="Downloading files: ", barglyphs=BarGlyphs('|','█', ['▁' ,'▃' ,'▅' ,'▆', '▇'],' ','|',), showspeed=true)
     channel = RemoteChannel(()->Channel{String}(length(urls)), 1)
     fetch(@sync begin
         @async while let 
@@ -206,7 +213,8 @@ end
 
         @async begin 
             results = asyncmap(url -> begin
-                save_path = joinpath(path, basename(url))
+                #save_path = joinpath(path, basename(url))
+                save_path = joinpath(path, replace(url, replace_path => ""))
                 downloadedpath = download(url, save_path)
                 put!(channel, downloadedpath)
                 downloadedpath
