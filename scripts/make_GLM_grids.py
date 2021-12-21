@@ -72,7 +72,7 @@ def create_parser():
                         action='store', dest='goes_position',
                         help=("One of [east|west|test]. "
                               "Also requires goes_sector."))
-    parser.add_argument('--goes_sector', default='none',
+    parser.add_argument('--goes_sector', default='full',
                         action='store', dest='goes_sector',
                         help=("One of [full|conus|meso]. "
                               "Also requires goes_position. If sector is "
@@ -133,6 +133,18 @@ logging.basicConfig(handlers = [logoutfile],
 # Separate from log setup - actually log soemthign specific to this module.
 log = logging.getLogger(__name__)
 log.info("Starting GLM Gridding")
+
+
+def get_goes_position(filenames):
+    if all("_G16_" in f for f in filenames):
+        return "east"
+    if all("_G17_" in f for f in filenames):
+        return "west"
+
+    # we require that all files are from the same sensor and raise an exception if not
+    raise ValueError("could not determine GOES position - did you provide a mix of satellites?")
+
+
 
 def nearest_resolution(args):
     """ Uses args.dx to find the closest resolution specified by the
@@ -203,6 +215,8 @@ def grid_setup(args):
     date = datetime(start_time.year, start_time.month, start_time.day)
 
     outpath = args.outdir
+    if args.goes_position == 'none':
+        args.goes_position = get_goes_position(glm_filenames)
 
     if args.fixed_grid:
         proj_name = 'geos'
@@ -304,8 +318,7 @@ def grid_setup(args):
     if args.fixed_grid:
         grid_kwargs['fixed_grid'] = True
         grid_kwargs['nadir_lon'] = nadir_lon
-    if args.split_events:
-        grid_kwargs['clip_events'] = True
+    grid_kwargs['clip_events'] = True
     if min_groups is not None:
         grid_kwargs['min_groups_per_flash'] = min_groups
     if args.is_lma:
