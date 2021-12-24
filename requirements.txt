@@ -11,6 +11,5 @@ numpy~=1.21.4
 
 netcdf4~=1.5.8
 dask~=2021.10.0
-lmatools~=0.6a0
-glmtools~=0.1.dev0
 satpy~=0.33.1
+
