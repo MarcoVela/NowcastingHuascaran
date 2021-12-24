@@ -420,3 +420,7 @@ $RECYCLE.BIN/
 
 # GMT files
 *.history
+
+*.idea/*
+
+*.pyc
