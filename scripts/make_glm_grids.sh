@@ -1,0 +1,1 @@
+python make_GLM_grids.py --fixed_grid --dt 60 --dx 2 --dy 2 ../data/exp_raw/GLM-L2-LCFA/2021/001/01/OR_GLM-L2-LCFA_G16_s2021001012* -o ../data/exp_pro/ndataGLM/{start_time:%Y/%b/%d}/{dataset_name} --float_output
