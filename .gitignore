@@ -92,7 +92,7 @@ Backup of *.doc*
 # *.pdf
 
 ## Generated if empty string given at "Please type another file name for output:"
-.pdf
+main.pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
 *.bbl
@@ -420,3 +420,7 @@ $RECYCLE.BIN/
 
 # GMT files
 *.history
+
+*.idea/*
+
+*.pyc
