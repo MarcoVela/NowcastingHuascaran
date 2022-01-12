@@ -3,6 +3,7 @@ using Dates
 using NCDatasets
 using ProgressMeter
 using DataStructures
+using ClimateBase
 
 function get_GOESR_grid_specifications(resolution_km = 2.0)
   spanEW = 0.151872*2.0
@@ -283,7 +284,6 @@ function main(resolution_km = 2.0,
   end
 end
 
-using ClimateBase
 function ncreadall(fs, var)
   ds = NCDataset(fs[1])
   lat = ds["latitude"][:]
