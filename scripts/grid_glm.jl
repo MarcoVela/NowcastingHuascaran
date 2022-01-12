@@ -25,38 +25,20 @@ function get_GOESR_grid_specifications(resolution_km = 2.0)
   )
 end
 
+
 function get_GOESR_edges(resolution_km = 2.0)
-  x_pad = 100*28.0e-6
-  y_pad = 100*28.0e-6
-
-  specs = get_GOESR_grid_specifications(resolution_km)
-  nx, ny = Float64(specs.pixelsEW), Float64(specs.pixelsNS)
-  dx = dy = specs.resolution
-  x_ctr, y_ctr = specs.centerEW, specs.centerNS
-  x_edges = ((0.0:nx) .- ((nx+1)/2.)) * dx .+ x_ctr .+ dx/2.
-  y_edges = ((0.0:ny) .- ((ny+1)/2.)) * dy .+ y_ctr .+ dy/2.
-
-  n_x_pad = floor(Int64, x_pad/dx)
-  n_y_pad = floor(Int64, y_pad/dy)
-  x_pad = n_x_pad*dx
-  y_pad = n_y_pad*dy
-
-  x_edges = (minimum(x_edges) - x_pad):step(x_edges):(maximum(x_edges) + x_pad)
-  y_edges = (minimum(y_edges) - y_pad):step(y_edges):(maximum(y_edges) + y_pad)
-
-  return (x_edges, y_edges), (n_x_pad, n_y_pad)
+  km_to_degree_lat = 1/110.574
+  km_to_degree_lon = 1/111.32
+  step_lat = resolution_km * km_to_degree_lat
+  step_lon = resolution_km * km_to_degree_lon 
+  lat = -51:step_lat:13
+  lon = -84:step_lon:-31
+  (lon, lat)
 end
 
 # Usar esto para escribir al archivo netcdf
 function get_out_grid(edges, pads)
-  n_x_pad, n_y_pad = pads
-  xedge, yedge = edges
-  x_coord = ((xedge[begin:end-1] .+ xedge[begin+1:end]) / 2.0)[n_x_pad+1:end-n_x_pad]
-  y_coord = ((yedge[begin:end-1] .+ yedge[begin+1:end]) / 2.0)[n_y_pad+1:end-n_y_pad]
-  (
-    x_coord,
-    y_coord
-  )
+  edges
 end
 
 
@@ -65,10 +47,6 @@ function flash_extent_density(vs::Tuple{N, T}, edges) where {N,T}
   hist.weights
 end
 
-function flash_extent_density(vs::Tuple{N, T}, edges, pads) where {N,T}
-  n_x_pad, n_y_pad = pads
-  hist = flash_extent_density(vs, edges)[n_x_pad+1:end-n_x_pad, n_y_pad+1:end-n_y_pad]
-end
 
 function parse_glm_filename_time(time_str)
   d = DateTime(time_str[2:5]*time_str[9:end-1], dateformat"yyyyHHMMSS") + 
@@ -168,125 +146,14 @@ function readdirall(path)
   names
 end
 
-function ltg_ellpse_rev(date)
-  if date < Date(2018,10,15)
-    return 0
-  else
-    return 1
-  end
-end
 
-const lightning_ellipse_rev = [
-  # Values at launch
-  (6.394140e6, 6.362755e6),
-  
-  # DO.07, late 2018. First Virts revision.
-  # The GRS80 altitude + 6 km differs by about 3 m from the value above
-  # which is the exact that was provided at the time of launch. Use the
-  # original value instead of doing the math.
-  # 6.35675231414e6+6.0e3
-  (6.378137e6 + 14.0e3, 6.362755e6),
-]
-
-function ltg_ellps_lon_lat_to_fixed_grid(lon, lat, sat_lon, 
-  ellipse_rev, 
-  re_grs80=6.378137e6, 
-  rp_grs80=6.35675231414e6,
-  sat_grs80_height=35.786023e6)
-
-  re_ltg_ellps, rp_ltg_ellps = lightning_ellipse_rev[begin + ellipse_rev]
-  ff_ltg_ellps = (re_ltg_ellps - rp_ltg_ellps)/re_ltg_ellps
-  ff_grs80 = (re_grs80 - rp_grs80)/re_grs80 # 0.003352810704800 
-  sat_H = sat_grs80_height + re_grs80 # 42.164e6 
-
-  # center longitudes on satellite, and ensure between +/- 180
-  dlon = lon .- sat_lon
-  dlon[dlon .< -180.] .+= 360.
-  dlon[dlon .> 180.] .-= 360.
-
-  lon_rad = deg2rad.(dlon)
-  lat_rad = deg2rad.(lat)
-
-  lat_geocent = atan.((1. - ff_grs80)^2 * tan.(lat_rad))
-
-  # We assume geocentric latitude
-  sincos_factor = sincos.(lat_geocent)
-  cos_factor = last.(sincos_factor)
-  sin_factor = first.(sincos_factor)
-
-  R = re_ltg_ellps*(1-ff_ltg_ellps) ./ sqrt.(1.0 .- ff_ltg_ellps*(2.0-ff_ltg_ellps)*cos_factor.^2)
-  
-  lon_sincos = sincos.(lon_rad)
-  lon_sin_factor = first.(lon_sincos)
-  lon_cos_factor = last.(lon_sincos)
-  vx = R .* cos_factor .* lon_cos_factor .- sat_H
-  vy = R .* cos_factor .* lon_sin_factor
-  vz = R .* sin_factor
-  vmag = sqrt.(vx .^ 2 .+ vy .^ 2 .+ vz .^ 2)
-  vx ./= -vmag # minus signs flip so x points to earth, z up, y left
-  vy ./= -vmag
-  vz ./= vmag
-
-  # Microradians
-  alpha = atan.(vz ./ vx) #* 1e6
-  beta = -asin.(vy) #* 1e6
-  return beta, alpha
-end
-
-function fixed_grid_to_lat_lon((x,y), lon_origin, r_eq, r_pol, perspective_point_height, semi_major_axis)
-  H = perspective_point_height + semi_major_axis
-  lambda_0 = (lon_origin*π)/180.0
-  x_sincos = sincos.(x)
-  x_sin_factor = first.(x_sincos)
-  x_cos_factor = last.(x_sincos)
-
-  y_sincos = sincos.(y)
-  y_sin_factor = first.(y_sincos)
-  y_cos_factor = last.(y_sincos)
-  a_var = x_sin_factor .^ 2.0 .+ 
-  (
-    (x_cos_factor .^ 2.0) .*
-    (
-      y_cos_factor .^ 2.0 .+
-      (
-        ((r_eq*r_eq)/(r_pol*r_pol)) *
-        y_sin_factor .^ 2.0
-      )
-    )
-  )
-  b_var = -2.0*H*x_cos_factor .* y_cos_factor
-  c_var = (H ^ 2.0)-(r_eq ^ 2.0)
-  r_s = (-b_var .- sqrt.(Complex.((b_var .^ 2) .- (4*a_var*c_var)))) ./ (2.0*a_var)
-  s_x = r_s .* x_cos_factor .* y_cos_factor
-  s_y = -r_s .* x_sin_factor
-  s_z = r_s .* x_cos_factor .* y_sin_factor
-
-  lat = (180.0/π) * 
-  (
-    atan.(
-      ((r_eq*r_eq)/(r_pol*r_pol))*
-      (
-        s_z ./ sqrt.(((H .- s_x) .^ 2) .+ (s_y .^ 2))
-      )
-    )
-  )
-  lon = (180.0/π) * (lambda_0 .- atan.(s_y ./ (H .- s_x)))
-
-  (lat, lon)
-end
 
 function read_flash_coordinates(fs)
   flash_x = Float32[]
   flash_y = Float32[]
   for f in fs
     ds = NCDataset(f)
-    nadir_lon = ds["lon_field_of_view"][1]
-    pt = ds["product_time"][1]
-    ellipse_rev = ltg_ellpse_rev(pt)
-    f_x, f_y = ltg_ellps_lon_lat_to_fixed_grid(
-      ds["flash_lon"][:], ds["flash_lat"][:],
-      nadir_lon, ellipse_rev
-    )
+    f_x, f_y = ds["flash_lon"][:], ds["flash_lat"][:]
     append!(flash_x, f_x)
     append!(flash_y, f_y)
     close(ds)
@@ -298,26 +165,97 @@ function read_flash_coordinates(fs)
   )
 end
 
-struct GLMGriddedProduct{S,T,F,D}
+struct GLMGriddedProduct{S,L,F,D}
   spatial_resolution::S
   time_coverage_start::DateTime
   time_coverage_end::DateTime
   environment::D
   platform::D
-  x::T
-  y::T
+  x::L
+  y::L
   flash_extent_density::F
 end
 
 
+
+function sub_grid_files(fs, dt, edges)
+  groups = group_filenames(fs, dt)
+  x_edge, y_edge = edges
+  FEDs = Array{Float32, 3}(undef, length(x_edge)-1, length(y_edge)-1, length(groups))
+  time = Vector{DateTime}(undef, length(groups))
+  for (i, group) in enumerate(groups)
+    files = first.(group)
+    metadata = last.(group)
+    mean_start_time = mean(datetime2unix, x.start_time for x in metadata)
+    mean_end_time = mean(datetime2unix, x.end_time for x in metadata)
+    mean_time = unix2datetime(mean([mean_start_time, mean_end_time]))
+    coords = read_flash_coordinates(files)
+    FEDs[:, :, i] = flash_extent_density(coords, edges)
+
+    time[i] = mean_time
+  end
+  FEDs, time
+end
+
+function edges_to_dims(edges)
+  xedge, yedge = edges
+  x_coord = (xedge[begin:end-1] .+ xedge[begin+1:end]) / 2.0
+  y_coord = (yedge[begin:end-1] .+ yedge[begin+1:end]) / 2.0
+  (
+    x_coord,
+    y_coord,
+  )
+end
+
+function grid_files(resolution_km, fs, dt_file, dt_grids, outdir="./")
+  edges = get_GOESR_edges(resolution_km)
+  groups = group_filenames(fs, dt_file)
+  outdirs = Set{String}()
+  lon, lat = edges_to_dims(edges)
+  @showprogress for group in groups
+    files = first.(group)
+    metadata = last.(group)
+    platform = metadata[begin].platform
+    environment = metadata[begin].environment
+    start_time = metadata[begin].start_time
+    end_time = metadata[end].end_time
+    FEDs, time_dim = sub_grid_files(files, dt_grids, edges)
+    dims = (Lon(lon), Lat(lat), ClimateBase.Time(time_dim))
+    filename = create_glm_filename(environment, platform, start_time, end_time)
+    attrib = OrderedDict(
+      "cdm_data_type"             => "Image",
+      "keywords"                  => "ATMOSPHERE > ATMOSPHERIC ELECTRICITY > LIGHTNING, ATMOSPHERE > ATMOSPHERIC PHENOMENA > LIGHTNING",
+      "keywords_vocabulary"       => "NASA Global Change Master Directory (GCMD) Earth Science Keywords, Version 7.0.0.0.0",
+      "summary"                   => "The Lightning Detection Gridded product generates fields starting from the GLM Lightning Detection Events, Groups, Flashes product.  It consists of flash extent density.",
+      "title"                     => "GLM L2 Lightning Detection Gridded Product",
+      "dataset_name"              => filename,
+      "orbital_slot"              => "GOES-East",
+      "platform_ID"               => platform,
+      "production_data_source"    => "Postprocessed",
+      "spatial_resolution"        => "$(resolution_km)km at nadir",
+      "time_coverage_end"         => Dates.format(end_time, "YYYY-mm-ddTHH:MM:SS.ss"),
+      "time_coverage_start"       => Dates.format(start_time, "YYYY-mm-ddTHH:MM:SS.ss"),
+      "timeline_id"               => "ABI Mode 3",
+    )
+    A = ClimArray(FEDs, dims; name="flash_extent_density", attrib=attrib)
+    outdir_group = joinpath(outdir, Dates.format(start_time, "YYYY/mm"))
+    if outdir_group ∉ outdirs
+      mkpath(outdir_group)
+      push!(outdirs, outdir_group)
+    end
+    ncwrite_compressed(joinpath(outdir_group, filename), A)
+    sleep(0.5)
+  end
+end
+
 function main(resolution_km = 2.0, 
   dt = Hour(6), 
-  fs = readdirall("/home/socosani/Documents/VSCode/nowcasting-huascaran/data/exp_raw/GLM-L2-LCFA/2020/001"),
+  fs = readdirall("."),
   outdir = "./"
   )
   groups = group_filenames(fs, dt)
-  (x_edges, y_edges), pads = get_GOESR_edges(resolution_km)
-  x_out, y_out = get_out_grid((x_edges, y_edges), pads)
+  (x_edges, y_edges) = get_GOESR_edges(resolution_km)
+  x_out, y_out = (x_edges, y_edges)
 
   @showprogress for group in groups
     files = first.(group)
@@ -327,7 +265,8 @@ function main(resolution_km = 2.0,
     start_time = minimum([x.start_time for x in metadatas])
     end_time = maximum([x.end_time for x in metadatas])
     coords = read_flash_coordinates(files)
-    hist = flash_extent_density(coords, (x_edges, y_edges), pads)
+    hist = flash_extent_density(coords, (x_edges, y_edges))
+    firstinfo = first(metadatas)
     griddedproduct = GLMGriddedProduct(
       resolution_km,
       start_time,
@@ -343,6 +282,32 @@ function main(resolution_km = 2.0,
     write_ncdf(griddedproduct, pathname)
   end
 end
+
+using ClimateBase
+function ncreadall(fs, var)
+  ds = NCDataset(fs[1])
+  lat = ds["latitude"][:]
+  lon = ds["longitude"][:]
+  A = Array(ds[var])
+  v = Array{eltype(A)}(undef, size(A)..., length(fs))
+  v[:, :, 1] = A
+  times = [ds["time"][1]]
+  cfvar = ds[var]
+  attrib = ClimateBase.get_attributes_from_var(ds, cfvar, var)
+
+  close(ds)
+
+  for (i, f) in enumerate(fs[2:end])
+    ds = NCDataset(f)
+    @assert lat == ds["latitude"][:]
+    @assert lon == ds["longitude"][:]
+    v[:, :, i + 1] = Array(ds[var])
+    push!(times, ds["time"][1])
+    close(ds)
+  end
+  ClimArray(v, (Lon(lon), Lat(lat), ClimateBase.Ti(times)); name=Symbol(var), attrib=attrib)
+end
+
 
 function write_ncdf(data, pathname)
   ds = NCDataset(pathname,"c", attrib = OrderedDict(
@@ -446,32 +411,6 @@ function write_ncdf(data, pathname)
   # ncminimum_flash_area[:] = ...
 
   close(ds)
-end
-
-
-using ClimateBase
-function ncreadall(fs, var)
-  ds = NCDataset(fs[1])
-  lat = ds["latitude"][:]
-  lon = ds["longitude"][:]
-  A = Array(ds[var])
-  v = Array{eltype(A)}(undef, size(A)..., length(fs))
-  v[:, :, 1] = A
-  times = [ds["time"][1]]
-  cfvar = ds[var]
-  attrib = ClimateBase.get_attributes_from_var(ds, cfvar, var)
-
-  close(ds)
-
-  for (i, f) in enumerate(fs[2:end])
-    ds = NCDataset(f)
-    @assert lat == ds["latitude"][:]
-    @assert lon == ds["longitude"][:]
-    v[:, :, i + 1] = Array(ds[var])
-    push!(times, ds["time"][1])
-    close(ds)
-  end
-  ClimArray(v, (Lon(lon), Lat(lat), ClimateBase.Ti(times)); name=Symbol(var), attrib=attrib)
 end
 
 function ncwrite_compressed(file::String, X::ClimArray; globalattr = Dict())
