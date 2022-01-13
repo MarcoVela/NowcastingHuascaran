@@ -4,6 +4,7 @@ using NCDatasets
 using ProgressMeter
 using DataStructures
 using ClimateBase
+using Suppressor
 
 function get_GOESR_grid_specifications(resolution_km = 2.0)
   spanEW = 0.151872*2.0
@@ -240,40 +241,23 @@ function grid_files(resolution_km, fs, dt_file, dt_grids, outdir="./")
   edges = get_GOESR_edges(resolution_km)
   groups = group_filenames(fs, dt_file)
   outdirs = Set{String}()
-  lon, lat = edges_to_dims(edges)
   @showprogress for group in groups
-    files = first.(group)
     metadata = last.(group)
-    platform = metadata[begin].platform
-    environment = metadata[begin].environment
     start_time = metadata[begin].start_time
-    end_time = metadata[end].end_time
-    FEDs, time_dim = sub_grid_files(files, dt_grids, edges)
-    dims = (Lon(lon), Lat(lat), ClimateBase.Time(time_dim))
-    filename = create_glm_filename(environment, platform, start_time, end_time)
-    attrib = OrderedDict(
-      "cdm_data_type"             => "Image",
-      "keywords"                  => "ATMOSPHERE > ATMOSPHERIC ELECTRICITY > LIGHTNING, ATMOSPHERE > ATMOSPHERIC PHENOMENA > LIGHTNING",
-      "keywords_vocabulary"       => "NASA Global Change Master Directory (GCMD) Earth Science Keywords, Version 7.0.0.0.0",
-      "summary"                   => "The Lightning Detection Gridded product generates fields starting from the GLM Lightning Detection Events, Groups, Flashes product.  It consists of flash extent density.",
-      "title"                     => "GLM L2 Lightning Detection Gridded Product",
-      "dataset_name"              => filename,
-      "orbital_slot"              => "GOES-East",
-      "platform_ID"               => platform,
-      "production_data_source"    => "Postprocessed",
-      "spatial_resolution"        => "$(resolution_km)km at nadir",
-      "time_coverage_end"         => Dates.format(end_time, "YYYY-mm-ddTHH:MM:SS.ss"),
-      "time_coverage_start"       => Dates.format(start_time, "YYYY-mm-ddTHH:MM:SS.ss"),
-      "timeline_id"               => "ABI Mode 3",
-    )
-    A = ClimArray(FEDs, dims; name="flash_extent_density", attrib=attrib)
+    A, filename = grid_group(edges, group, dt_grids, resolution_km)
     outdir_group = joinpath(outdir, Dates.format(start_time, "YYYY/mm"))
     if outdir_group ∉ outdirs
       mkpath(outdir_group)
       push!(outdirs, outdir_group)
     end
-    ncwrite_compressed(joinpath(outdir_group, filename), A)
-    sleep(0.5)
+    @suppress ncwrite_compressed(joinpath(outdir_group, filename), A)
+  end
+end
+
+function grid_files_in_dir(resolution_km, indir, dt_file, dt_grids, outdir="./")
+  for folder in readdir(indir; join=true)
+    @show folder
+    grid_files(resolution_km, readdirall(folder), dt_file, dt_grids, outdir)
   end
 end
 
