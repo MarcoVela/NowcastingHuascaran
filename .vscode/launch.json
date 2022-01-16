@@ -1,0 +1,28 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": [
+        "--fixed_grid", 
+        "--dt", "60",
+        "--dx",
+        "8",
+        "--dy",
+        "8",
+        "./data/exp_raw/GLM-L2-LCFA/2021/001/01/OR_GLM-L2-LCFA_G16_s2021001010*",
+        "-o",
+        "./data/exp_pro/ndataGLM/{start_time:%Y/%b/%d}/{dataset_name}",
+        "--float_output"
+      ],
+      "justMyCode": false
+    }
+  ]
+}

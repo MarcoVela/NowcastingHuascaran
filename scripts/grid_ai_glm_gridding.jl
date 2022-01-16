@@ -111,7 +111,7 @@ function create_glm_filename(
   end_time::String,
   creation_time::String
 )
-  fname = "$(environment)_GLM-L2-GLMF-M3_$(platform)_s$(start_time)_e$(end_time)_c$(creation_time).nc"
+  "$(environment)_GLM-L2-GLMF-M3_$(platform)_s$(start_time)_e$(end_time)_c$(creation_time).nc"
 end
 
 # Excepts the filepaths sorted
@@ -237,6 +237,35 @@ function grid_group(edges, group, dt_grids, resolution_km)
   ClimArray(FEDs, dims; name="flash_extent_density", attrib=attrib), filename
 end
 
+
+function grid_group2(edges, group, dt_grids, resolution_km)
+  lon, lat = edges_to_dims(edges)
+  files, metadata = first.(group), last.(group)
+  platform = metadata[begin].platform
+  environment = metadata[begin].environment
+  start_time = metadata[begin].start_time
+  end_time = metadata[end].end_time
+  FEDs, time_dim = sub_grid_files(files, dt_grids, edges)
+  dims = (Lon(lon), Lat(lat), ClimateBase.Time(time_dim))
+  filename = create_glm_filename(environment, platform, start_time, end_time)
+  attrib = OrderedDict(
+    "cdm_data_type"             => "Image",
+    "keywords"                  => "ATMOSPHERE > ATMOSPHERIC ELECTRICITY > LIGHTNING, ATMOSPHERE > ATMOSPHERIC PHENOMENA > LIGHTNING",
+    "keywords_vocabulary"       => "NASA Global Change Master Directory (GCMD) Earth Science Keywords, Version 7.0.0.0.0",
+    "summary"                   => "The Lightning Detection Gridded product generates fields starting from the GLM Lightning Detection Events, Groups, Flashes product.  It consists of flash extent density.",
+    "title"                     => "GLM L2 Lightning Detection Gridded Product",
+    "dataset_name"              => filename,
+    "orbital_slot"              => "GOES-East",
+    "platform_ID"               => platform,
+    "production_data_source"    => "Postprocessed",
+    "spatial_resolution"        => "$(resolution_km)km at nadir",
+    "time_coverage_end"         => Dates.format(end_time, "YYYY-mm-ddTHH:MM:SS.ss"),
+    "time_coverage_start"       => Dates.format(start_time, "YYYY-mm-ddTHH:MM:SS.ss"),
+    "timeline_id"               => "ABI Mode 3",
+  )
+  ClimArray(FEDs, dims; name="flash_extent_density", attrib=attrib), filename
+end
+
 function grid_files(resolution_km, fs, dt_file, dt_grids, outdir="./")
   edges = get_GOESR_edges(resolution_km)
   groups = group_filenames(fs, dt_file)
@@ -244,8 +273,8 @@ function grid_files(resolution_km, fs, dt_file, dt_grids, outdir="./")
   @showprogress for group in groups
     metadata = last.(group)
     start_time = metadata[begin].start_time
-    A, filename = grid_group(edges, group, dt_grids, resolution_km)
-    outdir_group = joinpath(outdir, Dates.format(start_time, "YYYY/mm"))
+    A, filename = grid_group2(edges, group, dt_grids, resolution_km)
+    outdir_group = joinpath(outdir, Dates.format(start_time, "YYYY"))
     if outdir_group ∉ outdirs
       mkpath(outdir_group)
       push!(outdirs, outdir_group)
@@ -255,8 +284,7 @@ function grid_files(resolution_km, fs, dt_file, dt_grids, outdir="./")
 end
 
 function grid_files_in_dir(resolution_km, indir, dt_file, dt_grids, outdir="./")
-  for folder in readdir(indir; join=true)
-    @show folder
+  @showprogress for folder in readdir(indir; join=true)
     grid_files(resolution_km, readdirall(folder), dt_file, dt_grids, outdir)
   end
 end
@@ -528,3 +556,36 @@ function run(dataset_path, resolution_km, temporal_resolution, outdir="./")
     ncwrite_compressed(joinpath(outdir, filename), A)
   end
 end
+
+function reescale_time(ds, interval)
+  ds_day = ds.dims[3][1] |> Date |> DateTime
+  ti = DateTime(ds_day)
+  lo,la,t = size(ds)
+  newds = zeros(eltype(ds), (lo,la,Minute(60*24) ÷ interval))
+  i = 1
+  newtdim = Vector{DateTime}()
+  while ti < ds_day + Day(1)
+      intervalds = ds[Ti(Between(ti, ti + interval))]
+      if size(intervalds, 3) > 0
+        newds[:, :, i:i] = sum(intervalds; dims=3)
+      end
+      tdim = mean(datetime2unix, [ti, ti+interval]) |> unix2datetime
+      push!(newtdim, tdim)
+      ti += interval
+      i += 1
+  end
+  lon, lat, _ = ds.dims
+  ClimArray(newds, (lon, lat, Ti(newtdim)); name=ds.name, attrib=ds.attrib)
+end
+
+
+function reescale_files_in_folder(indir, interval, outdir)
+  mkpath(outdir)
+  @showprogress for f in readdirall(indir)
+    fed = ncread(f, "flash_extent_density")
+    fed_reescaled = reescale_time(fed, interval)
+    filename = basename(f)
+    @suppress ncwrite_compressed(joinpath(outdir, filename), fed_reescaled)
+  end
+end
+
