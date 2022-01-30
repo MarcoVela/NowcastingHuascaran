@@ -8,6 +8,7 @@ using CodecZlib
 using Plots
 using NPZ
 using HDF5
+using Images
 
 const WIDTH = 64
 const HEIGHT = 64
@@ -26,10 +27,11 @@ as_ints(a::AbstractArray{CartesianIndex{L}}) where L = reshape(reinterpret(Int, 
 
 as_floats(a::AbstractArray{CartesianIndex{L}}) where L = Float64.(reshape(reinterpret(Int, a), (L, size(a)...)))
 
-function boxes_from_image(image; threshold=1.0, radius=24, min_cluster_size=128, time_factor=10)
+function boxes_from_image(image; threshold=1.0, radius=24, min_cluster_size=128, time_factor=radius / 2)
     inds = findall(>=(threshold), image)
     length(inds) == 0 && return []
     indsmat = as_floats(inds)
+    indsmat[3, :] *= time_factor
     clusters = dbscan(indsmat, radius; min_cluster_size)
     [cluster_to_bounding_box(x, indsmat) for x in clusters]
 end
@@ -37,8 +39,10 @@ end
 rect(w, h, x, y) = Shape(x .+ [0,w,w,0], y .+ [0,0,h,h])
 #plot!(bbox, fillalpha=0, linecolor=:white)
 
-function clim_arr_clusters(climarr; threshold=1.0, radius=24, min_cluster_size=128, time_factor=10)
-    inds = findall(>=(threshold), climarr.data)
+function clim_arr_clusters(climarr; threshold=1.0, radius=24, min_cluster_size=64, time_factor=radius / 2)
+    ds = copy(climarr.data)
+    ds = ds |> dilate! |> dilate! |> erode! |> erode! |> erode!
+    inds = findall(>=(threshold), ds)
     indsmat = as_floats(inds)
     indsmat[3, :] *= time_factor
     dbscan(indsmat, radius; min_cluster_size), inds
