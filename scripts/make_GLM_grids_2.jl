@@ -188,8 +188,8 @@ const lightning_ellipse_rev = [
   (6.378137e6 + 14.0e3, 6.362755e6),
 ]
 
-function ltg_ellps_lon_lat_to_fixed_grid(lon, lat, sat_lon, 
-  ellipse_rev, 
+function ltg_ellps_lon_lat_to_fixed_grid(lon, lat, sat_lon = -75.0f0, 
+  ellipse_rev = 1, 
   re_grs80=6.378137e6, 
   rp_grs80=6.35675231414e6,
   sat_grs80_height=35.786023e6)

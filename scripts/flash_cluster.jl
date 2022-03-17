@@ -12,6 +12,7 @@ using Images
 
 const WIDTH = 64
 const HEIGHT = 64
+const TIME_SIZE = 32
 
 
 function cluster_to_bounding_box(cluster, indsmat)
@@ -136,7 +137,6 @@ function isolate_events(ds, clusters, inds)
     [crop_event(ds, c, inds) for c in clusters]
 end
 
-const TIME_SIZE = 16
 
 function generate_dataset_python(rng, boxes)
     ds = Vector{Array{Float32, 3}}()

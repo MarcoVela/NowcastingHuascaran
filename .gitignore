@@ -426,3 +426,7 @@ $RECYCLE.BIN/
 *.pyc
 
 **/node_modules
+
+*.h5
+
+artifacts
