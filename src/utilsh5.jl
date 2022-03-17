@@ -128,7 +128,7 @@ end
 
 folder_name(::H5Store) = "h5"
 
-function save!(store::H5Store, X, y, metadata; filename, prefix)
+function save!(store::H5Store, X, y, metadata; prefix)
     append!(store.X_batch, X)
     append!(store.y_batch, y)
     @assert length(store.X_batch) == length(store.y_batch)
