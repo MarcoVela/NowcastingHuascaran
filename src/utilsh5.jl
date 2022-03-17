@@ -6,6 +6,7 @@ using Clustering: dbscan
 using Images: dilate
 using Serialization: serialize
 using DrWatson
+using ProgressMeter
 
 
 
@@ -77,7 +78,7 @@ function arr_boxes(array;
     threshold=Float32(0.0),
     radius=24, 
     min_cluster_size=128, 
-    time_factor=radius/2;
+    time_factor=radius/2,
     width=WIDTH,
     height=HEIGHT,
 )
@@ -115,41 +116,14 @@ end
 
 
 
-abstract type DataStore{T} end;
-
-function folder_name(::DataStore) end
-
-function save!(::DataStore, chunk; kwargs...) end
-
-
-struct JLSStore{T} <: DataStore{T}
-    JLSStore(Q::DataType) = new{Q}()
-end
-
-folder_name(::JLSStore) = "jls"
-
-function save!(::JLSStore, chunk; filename, prefix)
-    serialize(joinpath(prefix, filename * ".jls"), chunk)
-end
-
-struct JLD2Store{T} <: DataStore{T}
-    JLD2Store(Q::DataType) = new{Q}()
-end
-
-folder_name(::JLD2Store) = "jld2"
-
-function save!(::JLD2Store, chunk; filename, prefix)
-    jldsave(joinpath(prefix, filename * ".jld2"), true; data=chunk)
-end
-
 mutable struct H5Store{T, R}
     X_batch::Vector{T}
     y_batch::Vector{R}
     batchsize::Int
     state::Int
-    H5Store(Q::DataType, Q2::DataType, batchsize) = new{Q}(Vector{Q}(), Vector{Q2}(), batchsize, 0)
-    H5Store(Q::DataType, batchsize) = new{Q}(Q, Q, batchsize, 0)
-    H5Store(Q::DataType) = new{Q}(Q, Q, 1024, 0)
+    H5Store(Q::DataType, Q2::DataType, batchsize) = new{Q, Q2}(Vector{Q}(), Vector{Q2}(), batchsize, 0)
+    H5Store(Q::DataType, batchsize) = new{Q, Q}(Q, Q, batchsize, 0)
+    H5Store(Q::DataType) = new{Q, Q}(Q, Q, 1024, 0)
 end
 
 folder_name(::H5Store) = "h5"
@@ -178,27 +152,6 @@ function binarize!(x, t)
         x[i] = x[i] > t
     end
     x
-end
-
-
-function generate_datasets(indir, outdir; 
-    stores = (JLSStore, JLD2Store, H5Store), 
-    binary_threshold = zero(Float32),
-)
-    savers = map(x -> x(Array{Float32, 3}), stores)
-    folders = map(folder_name, savers)
-    outdirs = joinpath.(outdir, folders)
-    mkpath.(outdirs)
-    @showprogress for f in readdir(indir; join=true)
-        rng = MersenneTwister(42)
-        A = ncread(f, "flash_extent_density")
-        boxed_events = binarize!.(arr_boxes(A.data), binary_threshold)
-        shuffle!(rng, boxed_events)
-        base_filename,_ = splitext(basename(f))
-        @sync for (saver, folder) in zip(savers, outdirs)
-            @async save!(saver, boxed_events; filename=base_filename, prefix=folder)
-        end
-    end
 end
 
 
@@ -233,7 +186,7 @@ function generate_dataset(indir, outdir;
             threshold=CLUSTERING_THRESHOLD,
             radius=CLUSTERING_RADIUS, 
             min_cluster_size=CLUSTERING_MIN_CLUSTER_SIZE,
-            time_factor=CLUSTERING_TIME_FACTOR;
+            time_factor=CLUSTERING_TIME_FACTOR,
             width=WIDTH,
             height=HEIGHT,
         )
