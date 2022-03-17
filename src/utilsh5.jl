@@ -61,11 +61,11 @@ end
 
 
 # crops the dataset provided using the cluster indices
-function crop_dataset(ds, indsmat; WIDTH, HEIGHT)
+function crop_dataset(ds, indsmat; width, height)
     box = cluster_to_bounding_box(indsmat)
     x_n = size(ds, 2)
     y_n = size(ds, 1)
-    box = reshape_box(box, (WIDTH, HEIGHT), (x_n, y_n))
+    box = reshape_box(box, (width, height), (x_n, y_n))
     t_ini = floor(Int, indsmat[3, begin])
     t_fin = floor(Int, indsmat[3, end])
     (w,h,x,y) = box
