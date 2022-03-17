@@ -7,7 +7,6 @@ using Images: dilate
 using Serialization: serialize
 using DrWatson
 using ProgressMeter
-using OrderedCollections, FileIO
 
 
 # transforms an array of cartesian indexes to a matrix
@@ -171,7 +170,7 @@ function generate_dataset(indir, outdir;
         :CLUSTERING_MIN_CLUSTER_SIZE => 128,
         :CLUSTERING_TIME_FACTOR => 6,
         :SLIDING_WINDOW_STEPS => 2,
-        :BATCH_SIZE => 2048,
+        :BATCH_SIZE => 512,
     )
 )
     @unpack BATCH_SIZE = params
@@ -184,6 +183,7 @@ function generate_dataset(indir, outdir;
     @unpack WIDTH, HEIGHT, TIME_IN, TIME_OUT = params
     @unpack CLUSTERING_THRESHOLD, CLUSTERING_RADIUS, CLUSTERING_MIN_CLUSTER_SIZE, CLUSTERING_TIME_FACTOR = params
     @unpack SLIDING_WINDOW_STEPS = params
+    mkpath(outdir)
     @showprogress for f in readdir(indir; join=true)
         rng = MersenneTwister(RNG_SEED)
         A = ncread(f, "flash_extent_density")
