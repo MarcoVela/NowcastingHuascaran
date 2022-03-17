@@ -1,13 +1,13 @@
 using Random: MersenneTwister, shuffle!
 using ClimateBase: ncread
-using HDF5: h5open, create_group, close
+using HDF5
 using JLD2: jldsave
 using Clustering: dbscan
 using Images: dilate
 using Serialization: serialize
 using DrWatson
 using ProgressMeter
-
+using OrderedCollections, FileIO
 
 
 # transforms an array of cartesian indexes to a matrix
@@ -137,11 +137,15 @@ function save!(store::H5Store, X, y, metadata; prefix)
         y_tensor = list_to_tensor(splice!(store.y_batch, 1:store.batchsize))
         fname = joinpath(prefix, "$(store.state)_$(join(size(X_tensor), 'x'))_$(join(size(y_tensor), 'x')).h5")
         fid = h5open(fname, "w")
-        data_group = create_group(fid, "data")
-        data_group["X", shuffle=(), deflate=3] = X_tensor
-        data_group["y", shuffle=(), deflate=3] = y_tensor
+        #data_group = create_group(fid, "data")
+        create_dataset(fid, "X", X_tensor; deflate=3)
+        create_dataset(fid, "y", y_tensor; deflate=3)
+        #data_group["X", shuffle=(), deflate=3] = X_tensor
+        #data_group["y", shuffle=(), deflate=3] = y_tensor
         metadata_group = create_group(fid, "metadata")
-        metadata_group["params"] = metadata
+        for (k,v) in metadata
+            metadata_group[k] = v
+        end
         close(fid)
         store.state += 1
     end
