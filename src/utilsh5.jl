@@ -65,10 +65,11 @@ function crop_dataset(ds, indsmat; width, height, time_deltas)
     x_n = size(ds, 2)
     y_n = size(ds, 1)
     box = reshape_box(box, (width, height), (x_n, y_n))
+    _,_,t_min = minimum(indsmat; dims=2)
     _,_,t_max = maximum(indsmat; dims=2)
     t_ini_delta, t_fin_delta = time_deltas
-    t_ini = floor(Int, min(indsmat[3, begin] - t_ini_delta, 1))
-    t_fin = floor(Int, max(indsmat[3, end] + t_fin_delta, t_max))
+    t_ini = floor(Int, max(indsmat[3, begin] - t_ini_delta, t_min))
+    t_fin = floor(Int, min(indsmat[3, end] + t_fin_delta, t_max))
     (w,h,x,y) = box
     ds[y:(y+h-1), x:(x+w-1), t_ini:t_fin]
 end
