@@ -122,8 +122,8 @@ mutable struct H5Store{T, R}
     batchsize::Int
     state::Int
     H5Store(Q::DataType, Q2::DataType, batchsize) = new{Q, Q2}(Vector{Q}(), Vector{Q2}(), batchsize, 0)
-    H5Store(Q::DataType, batchsize) = new{Q, Q}(Q, Q, batchsize, 0)
-    H5Store(Q::DataType) = new{Q, Q}(Q, Q, 1024, 0)
+    #H5Store(Q::DataType, batchsize) = new{Q, Q}(Q, Q, batchsize, 0)
+    #H5Store(Q::DataType) = new{Q, Q}(Q, Q, 1024, 0)
 end
 
 folder_name(::H5Store) = "h5"
@@ -170,7 +170,8 @@ function generate_dataset(indir, outdir;
         :BATCH_SIZE => 2048,
     )
 )
-    h5store = H5Store(Tuple{rray{Float32, 3}, Array{Float32, 3}})
+    @unpack BATCH_SIZE = params
+    h5store = H5Store(Array{Float32, 3}, Array{Float32, 3}, BATCH_SIZE)
     h5folder = folder_name(h5store)
     savefolder = savename(params)
     outdir = joinpath(outdir, savefolder, h5folder)
