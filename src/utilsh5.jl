@@ -60,13 +60,16 @@ end
 
 
 # crops the dataset provided using the cluster indices
-function crop_dataset(ds, indsmat; width, height)
+function crop_dataset(ds, indsmat; width, height, time_deltas)
     box = cluster_to_bounding_box(indsmat)
     x_n = size(ds, 2)
     y_n = size(ds, 1)
     box = reshape_box(box, (width, height), (x_n, y_n))
-    t_ini = floor(Int, indsmat[3, begin])
-    t_fin = floor(Int, indsmat[3, end])
+    _,_,t_min = minimum(indsmat; dims=2)
+    _,_,t_max = maximum(indsmat; dims=2)
+    t_ini_delta, t_fin_delta = time_deltas
+    t_ini = min(floor(Int, indsmat[3, begin] - t_ini_delta), t_min)
+    t_fin = max(floor(Int, indsmat[3, end] + t_fin_delta), t_max)
     (w,h,x,y) = box
     ds[y:(y+h-1), x:(x+w-1), t_ini:t_fin]
 end
@@ -80,6 +83,7 @@ function arr_boxes(array;
     time_factor=radius/2,
     width=WIDTH,
     height=HEIGHT,
+    time_deltas=(0,0),
 )
     inds = findall(>(threshold), dilate(array; dims=[1,2]))
     length(inds) == 0 && return []
@@ -87,7 +91,7 @@ function arr_boxes(array;
     indsmat[3, :] *= time_factor
     clusters = dbscan(indsmat, radius; min_cluster_size)
     indsmat[3, :] /= time_factor
-    [crop_dataset(array, indsmat[:, c.core_indices]; width, height) for c in clusters]
+    [crop_dataset(array, indsmat[:, c.core_indices]; width, height, time_deltas) for c in clusters]
 end
 
 
@@ -171,6 +175,8 @@ function generate_dataset(indir, outdir;
         :CLUSTERING_TIME_FACTOR => 6,
         :SLIDING_WINDOW_STEPS => 2,
         :BATCH_SIZE => 2048,
+        :TIME_DELTA_BEFORE => 0,
+        :TIME_DELTA_AFTER => 0,
     )
 )
     @unpack BATCH_SIZE = params
@@ -183,6 +189,7 @@ function generate_dataset(indir, outdir;
     @unpack WIDTH, HEIGHT, TIME_IN, TIME_OUT = params
     @unpack CLUSTERING_THRESHOLD, CLUSTERING_RADIUS, CLUSTERING_MIN_CLUSTER_SIZE, CLUSTERING_TIME_FACTOR = params
     @unpack SLIDING_WINDOW_STEPS = params
+    @unpack TIME_DELTA_BEFORE, TIME_DELTA_AFTER = params
     mkpath(outdir)
     @showprogress for f in readdir(indir; join=true)
         rng = MersenneTwister(RNG_SEED)
@@ -194,6 +201,7 @@ function generate_dataset(indir, outdir;
             time_factor=CLUSTERING_TIME_FACTOR,
             width=WIDTH,
             height=HEIGHT,
+            time_deltas=(TIME_DELTA_BEFORE, TIME_DELTA_AFTER),
         )
         shuffle!(rng, boxed_events)
         boxes = sliding_window(boxed_events; 
