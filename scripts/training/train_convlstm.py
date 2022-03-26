@@ -222,5 +222,6 @@ if __name__ == "__main__":
             terminate_nan,
         ],
     )
+    model.evaluate(test_generator)
 
 
