@@ -11,13 +11,13 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.losses import binary_crossentropy, BinaryCrossentropy
 from tensorflow.keras.optimizers import Adam
 import os
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, TerminateOnNaN, TensorBoard
 
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 
 if len(gpus) == 0:
-    print("GPU required!")
-    exit(1)
+    print("Working with CPU!")
 
 
 class DataGenerator(Sequence):
@@ -146,21 +146,6 @@ def get_datasets(folder, splits, input_steps, output_steps, batch_size):
     test_generator = DataGenerator(test_files, input_steps=input_steps, output_steps=output_steps, batch_size=batch_size)
     return (train_generator, val_generator, test_generator)
 
-INPUT_STEPS = 16
-OUTPUT_STEPS = 8
-STEP_JUMP = 2
-
-
-folder = "./datastores/glm-boxes-2048/"
-
-
-
-
-
-
-model = get_compiled_model(INPUT_STEPS, OUTPUT_STEPS)
-
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, TerminateOnNaN
 
 
 
@@ -174,7 +159,7 @@ def infer_dataset_folder():
             raise ValueError("Can't infer dataset folder")
         return os.path.join(p, dirs[0])
     except Exception as e:
-        print(e.with_traceback())
+        print(e)
         return os.getcwd()
 
 if __name__ == "__main__":
@@ -187,12 +172,13 @@ if __name__ == "__main__":
     parser.add_argument('--in_steps', type=int, default=16)
     parser.add_argument('--out_steps', type=int, default=8)
     parser.add_argument('--skip_steps', type=int, default=1)
-    parser.add_argument('--filters', type=int, default=1)
-    parser.add_argument('--dataset', type=str, default=infer_dataset_folder())
-
+    parser.add_argument('--filters', type=int, default=32)
+    parser.add_argument('--dataroot', type=str, default=infer_dataset_folder())
+    parser.add_argument('--log_dir', type=str, default="logs")
     args = parser.parse_args()
+    print("Dataset has ", len(os.listdir(args.dataroot)), " files")
     (train_generator, val_generator, test_generator) = get_datasets(
-        args.dataset, 
+        args.dataroot, 
         train_val_test_split,
         args.in_steps,
         args.out_steps,
@@ -211,6 +197,7 @@ if __name__ == "__main__":
     early_stopping = EarlyStopping(monitor="val_loss", patience=3)
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", patience=2)
     terminate_nan = TerminateOnNaN()
+    tensorboard_callback = TensorBoard(log_dir=args.log_dir)
     model.fit(
         train_generator,
         epochs=args.max_epochs,
@@ -220,6 +207,7 @@ if __name__ == "__main__":
             reduce_lr,
             checkpoint,
             terminate_nan,
+            tensorboard_callback,
         ],
     )
     model.evaluate(test_generator)
