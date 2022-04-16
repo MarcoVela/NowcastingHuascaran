@@ -9,7 +9,7 @@ end
 
 mutable struct ConvRecur{T,S,P,N}
   cell::T
-  state::S
+  state::Tuple{S, S}
   return_sequences::P
   repeat_input::N
 end
@@ -49,7 +49,7 @@ Flux.reset!(m::ConvRecur) = (m.state = m.cell.state0)
 
 function ConvLSTM2DCell((width, height)::Tuple{<:Integer, <:Integer}, filter::Tuple{<:Integer, <:Integer}, ch::Pair{<:Integer, <:Integer}; 
   init=Flux.glorot_uniform, 
-  init_state=Flux.zeros32, 
+  init_state=Flux.glorot_uniform, 
   pad=0,
   stride=1,
   dilation=1,
@@ -97,8 +97,17 @@ function eachslice_split(A, n; dim)
 end
 
 function _convlstm2d_output(gates, Wc, c)
-  input_gate, forget_gate, cell_gate, output_gate = eachslice_split(gates, 4; dim=3)
-  Wci, Wcf, Wco = eachslice_split(Wc, 3; dim=3)
+  ch = size(gates, 3) ÷ 4
+  input_gate = view(gates, :, :, 1:ch, :)
+  forget_gate = view(gates, :, :, ch+1:2*ch, :)
+  cell_gate = view(gates, :, :, 2*ch+1:3*ch, :)
+  output_gate = view(gates, :, :, 3*ch+1:4*ch, :)
+  #input_gate, forget_gate, cell_gate, output_gate = eachslice_split(gates, 4; dim=3)
+  ch = size(Wc, 3) ÷ 3
+  Wci = view(Wc, :, :, 1:ch, :)
+  Wcf = view(Wc, :, :, ch+1:2*ch, :)
+  Wco = view(Wc, :, :, 2*ch+1:3*ch, :)
+  #Wci, Wcf, Wco = eachslice_split(Wc, 3; dim=3)
   i_t = @. sigmoid_fast(input_gate + Wci * c)
   f_t = @. sigmoid_fast(forget_gate + Wcf * c)
   c = @. f_t * c + i_t * tanh_fast(cell_gate)
@@ -117,21 +126,33 @@ function (m::ConvLSTM2DCell)((h, c), x_t::Q) where {Q <: AbstractArray{<:Number,
   _convlstm2d_output(gates, m.Wc, c)
 end
 
-function (m::ConvRecur{T})(x::Q)::Q where {T <: ConvLSTM2DCell, Q <: AbstractArray{<:Number, 4}}
+@noinline function _conv_recur_helper(x_t, m)
+  h_t, c = m.state
+  gates = x_t .+ m.cell.Whh(h_t)
+  m.state, y = _convlstm2d_output(gates, m.cell.Wc, c)
+  y
+end
+
+function (m::ConvRecur{T, S})(x)::S where {T <: ConvLSTM2DCell, S}
+  m.state, y = m.cell(m.state, x)
+  return y
+end
+
+function (m::ConvRecur{T, S})(x::AbstractArray{Q, 4})::S where {T <: ConvLSTM2DCell, Q <: Number, S}
+  h = [m(x) for x = eachslice(x; dims=4)]
+  sze = size(h[1])
+  return reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
+  
+
   Wxh = m.cell.Wxh(x)
   if m.return_sequences
-    h = Vector{typeof(m.state[1])}()
-    sizehint!(h, size(Wxh, 4) * m.repeat_input)
-    for _ = 1:m.repeat_input
-      for t in axes(Wxh, 4)
-        x_t = view(Wxh, :, :, :, t:t)
-        h_t, c = m.state
-        gates = x_t .+ m.cell.Whh(h_t)
-        m.state, y = _convlstm2d_output(gates, m.cell.Wc, c)
-        push!(h, y)
-      end
-    end
-    reduce((a,b) -> cat(a,b; dims=4), h)
+    h = [
+      _conv_recur_helper(Wxh[:,:,:,t:t], m) 
+      for _ = 1:m.repeat_input for t in axes(Wxh, 4)
+      ]
+    sze = size(h[1])
+    reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
+    #reduce((a,b) -> cat(a,b; dims=4), h)
   else
     for t = axes(Wxh, 4)
       x_t = view(Wxh, :, :, :, t:t)
