@@ -13,7 +13,7 @@ function keep_last_sample(x)
 end
 
 function repeat_samples(n)
-  return function(x)
+  return function r(x::Q)::Q where {Q <: AbstractArray}
     h = map(_ -> copy(x), Base.OneTo(n))
     reduce((a,b) -> cat(a,b; dims=4), h)
   end

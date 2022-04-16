@@ -1,5 +1,4 @@
 using Flux
-using Flux: chunk
 
 struct ConvLSTM2DCell{A,B,S,M}
   Wxh::A
@@ -8,16 +7,39 @@ struct ConvLSTM2DCell{A,B,S,M}
   state0::S
 end
 
-mutable struct ConvRecur{T,S,P}
+mutable struct ConvRecur{T,S,P,N}
   cell::T
   state::S
   return_sequences::P
+  repeat_input::N
 end
 Flux.@functor ConvRecur
 
-trainable(a::ConvRecur) = (; cell = a.cell)
-Base.show(io::IO, m::ConvRecur) = print(io, "ConvRecur(", m.cell, ")")
-reset!(m::ConvRecur) = (m.state = m.cell.state0)
+Flux.trainable(a::ConvRecur) = (; cell = a.cell)
+
+function Base.show(io::IO, m::MIME"text/plain", x::ConvRecur)
+  if get(io, :typeinfo, nothing) === nothing  # e.g. top level in REPL
+    Flux._big_show(io, x)
+  elseif !get(io, :compact, false)  # e.g. printed inside a Vector, but not a Matrix
+    Flux._layer_show(io, x)
+  else
+    show(io, x)
+  end
+end
+
+function _print_convrecur_options(io::IO, l)
+  l.return_sequences === false || print(io, ", return_sequences=", l.return_sequences)
+  l.repeat_input === 1 || print(io, ", repeat_input=", l.repeat_input)
+end
+
+function Base.show(io::IO, m::ConvRecur) 
+  print(io, "ConvRecur(", m.cell)
+  _print_convrecur_options(io, m)
+  print(io, ")")
+end
+#Base.show(io::IO, m::ConvRecur) = Flux._big_show(io, m)
+
+Flux.reset!(m::ConvRecur) = (m.state = m.cell.state0)
 
 # Requirements:
 # The input has to be in the format WHCTN (time and batch in the last two dims)
@@ -68,7 +90,7 @@ end
 
 function eachslice_split(A, n; dim)
   N = size(A, dim)
-  ranges = chunk(1:N, n)
+  ranges = Flux.chunk(1:N, n)
   inds_before = ntuple(Returns(:), dim-1)
   inds_after = ntuple(Returns(:), ndims(A)-dim)
   (view(A, inds_before..., r, inds_after...) for r in ranges)
@@ -95,16 +117,20 @@ function (m::ConvLSTM2DCell)((h, c), x_t::Q) where {Q <: AbstractArray{<:Number,
   _convlstm2d_output(gates, m.Wc, c)
 end
 
-function (m::ConvRecur{T})(x::Q) where {T <: ConvLSTM2DCell, Q <: AbstractArray{<:Number, 4}}
+function (m::ConvRecur{T})(x::Q)::Q where {T <: ConvLSTM2DCell, Q <: AbstractArray{<:Number, 4}}
   Wxh = m.cell.Wxh(x)
   if m.return_sequences
-    h = map(t -> begin
-      x_t = view(Wxh, :, :, :, t:t)
-      h_t, c = m.state
-      gates = x_t .+ m.cell.Whh(h_t)
-      m.state, y = _convlstm2d_output(gates, m.cell.Wc, c)
-      y
-    end, axes(Wxh, 4))
+    h = Vector{typeof(m.state[1])}()
+    sizehint!(h, size(Wxh, 4) * m.repeat_input)
+    for _ = 1:m.repeat_input
+      for t in axes(Wxh, 4)
+        x_t = view(Wxh, :, :, :, t:t)
+        h_t, c = m.state
+        gates = x_t .+ m.cell.Whh(h_t)
+        m.state, y = _convlstm2d_output(gates, m.cell.Wc, c)
+        push!(h, y)
+      end
+    end
     reduce((a,b) -> cat(a,b; dims=4), h)
   else
     for t = axes(Wxh, 4)
@@ -118,32 +144,33 @@ function (m::ConvRecur{T})(x::Q) where {T <: ConvLSTM2DCell, Q <: AbstractArray{
 end
 
 
-# function (m::ConvLSTM2DCell)((h, c), x::Q) where {Q <: }
-#   gates = m.Wxh(x)::Q .+ m.Whh(h)::Q
-#   input_gate, forget_gate, cell_gate, output_gate = view_into_channels(gates, 4)
-#   Wci, Wcf, Wco = view_into_channels(m.Wc, 3)
-#   i_t = @. sigmoid_fast(input_gate + Wci * c)
-#   f_t = @. sigmoid_fast(forget_gate + Wcf * c)
-#   c = @. f_t * c + i_t * tanh_fast(cell_gate)
-#   o_t = @. sigmoid_fast(output_gate + Wco * c)
-#   h′ = @. o_t * tanh_fast(c)
-#   return (h′, c), h′
-# end
-
-ConvRecur(m::ConvLSTM2DCell; return_sequences) = ConvRecur(m, m.state0, return_sequences)
+ConvRecur(m::ConvLSTM2DCell; return_sequences, repeat_input) = ConvRecur(m, m.state0, return_sequences, repeat_input)
 
 
-ConvLSTM2D(a...; return_sequences=false, ka...) = ConvRecur(ConvLSTM2DCell(a...; ka...); return_sequences)
-function Base.show(io::IO, l::ConvLSTM2DCell)
-  print(io, "ConvLSTM2DCell(", size(l.Wc)[1:2])
-  print(io, ", ", size(l.Wxh.weight)[1:ndims(l.Wxh.weight)-2])
-  print(io, ", ", Flux._channels_in(l.Wxh), " => ", Flux._channels_out(l.Wxh) ÷ 4)
-  print(io, ")")
-end
+ConvLSTM2D(a...; return_sequences=false, repeat_input=1, ka...) = ConvRecur(ConvLSTM2DCell(a...; ka...); return_sequences, repeat_input)
+
 
 
 Flux.@functor ConvLSTM2DCell
 Flux.trainable(c::ConvLSTM2DCell) = (; Wxh=c.Wxh, Whh=c.Whh, Wc=c.Wc)
+Flux._show_children(::ConvLSTM2DCell) = (; )
+Flux._show_leaflike(::ConvLSTM2DCell) = true
+
+function _print_convlstm2d_options(io::IO, l)
+  all(==(0), l.Wxh.pad) || print(io, ", pad=", Flux._maybetuple_string(l.Wxh.pad))
+  all(==(1), l.Wxh.stride) || print(io, ", stride=", Flux._maybetuple_string(l.Wxh.stride))
+  all(==(1), l.Wxh.dilation) || print(io, ", dilation=", Flux._maybetuple_string(l.Wxh.dilation))
+  (l.Wxh.bias === false) && print(io, ", bias=false")
+end
+
+
+function Base.show(io::IO, l::ConvLSTM2DCell)
+  print(io, "ConvLSTM2DCell(")
+  print(io, size(l.Wxh.weight)[1:ndims(l.Wxh.weight)-2])
+  print(io, ", ", Flux._channels_in(l.Wxh), " => ", Flux._channels_out(l.Wxh) ÷ 4)
+  _print_convlstm2d_options(io, l)
+  print(io, ")")
+end
 #Base.show(io::IO, m::ConvLSTM2DCell) = print(io, "ConvLSTM2DCell(", m.Whh, ", ", m.Wxh, ")")
 
 
