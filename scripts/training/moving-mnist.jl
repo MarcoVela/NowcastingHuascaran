@@ -25,14 +25,29 @@ end
 include(srcdir("layers", "ConvLSTM2D.jl"))
 using Flux.Losses: binarycrossentropy
 
-device = cpu
+const device = gpu
+const n = N = 10
 
+function keep_last(x)
+  local n = 1
+  local N = length(size(x))
+  inds_before = ntuple(Returns(:), N - 1)
+  copy(x[inds_before..., size(x, N)-n+1:size(x, N)])
+end
+
+function repeat_input(x)
+  h = Flux.Zygote.@ignore map(_ -> copy(x), Base.OneTo(n))
+  sze = size(x)
+  reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
+end
 
 model = Chain(
-    ConvLSTM2D((64, 64), (5, 5), 1 => 32, return_sequences=true, pad=SamePad()),
-    ConvLSTM2D((64, 64), (3, 3), 32 => 32, return_sequences=false, pad=SamePad()),
-    ConvLSTM2D((64, 64), (3, 3), 32 => 32, return_sequences=true, repeat_input=10, pad=SamePad()),
-    ConvLSTM2D((64, 64), (1, 1), 32 => 32, return_sequences=true, pad=SamePad()),
+    ConvLSTM2D((64, 64), (5, 5), 1 => 32, pad=SamePad()),
+    ConvLSTM2D((64, 64), (3, 3), 32 => 32, pad=SamePad()),
+    keep_last,
+    repeat_input,
+    ConvLSTM2D((64, 64), (3, 3), 32 => 32, pad=SamePad()),
+    ConvLSTM2D((64, 64), (1, 1), 32 => 32, pad=SamePad()),
     Conv((3, 3), 32 => 1, σ, pad=SamePad())
 ) |> device
 
@@ -53,17 +68,17 @@ function batched_loss(X, y)
   mean(loss(X_n, y_n) for (X_n, y_n) in zip(X_gen, y_gen))
 end
 
-N = 10
-mnist_x, mnist_y = copy(view(mnist_train, :, :, :, 1:N, 1:1024)), copy(view(mnist_train, :, :, :, N+1:20, 1:1024));
-using Flux.Data: DataLoader
-data = DataLoader((mnist_x, mnist_y); batchsize=args.batchsize, partial=false);
+mnist_x, mnist_y = copy(view(mnist_train, :, :, :, 1:N, 1:128)), copy(view(mnist_train, :, :, :, N+1:20, 1:128));
+# using Flux.Data: DataLoader
+# data = DataLoader((mnist_x, mnist_y); batchsize=args.batchsize, partial=false);
 
 data = zip(
-    (copy(view(mnist_train, :, :, :, 1:N, t)) for t in axes(mnist_train, 5)),
-    (copy(view(mnist_train, :, :, :, N+1:20, t)) for t in axes(mnist_train, 5))
+    (copy(view(mnist_train, :, :, :, 1:N, t)) for t in axes(mnist_x, 5)),
+    (copy(view(mnist_train, :, :, :, N+1:20, t)) for t in axes(mnist_y, 5))
 )
 
-tx, ty = (view(mnist_test, :,:,:,1:N,1:64), view(mnist_test, :,:,:,N+1:20,1:64))
+tx, ty = (view(mnist_test, :,:,:,1:N,1:4), view(mnist_test, :,:,:,N+1:20,1:4))
+
 evalcb = () -> @show batched_loss(tx, ty)
 
 using Flux.Optimise: ADAM
@@ -77,6 +92,7 @@ d = first(data)
 gs = Flux.gradient(p) do
   loss(d...)
 end
+
 Flux.update!(opt, p, gs)
 
 #Flux.train!(loss, p, data, opt)

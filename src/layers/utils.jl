@@ -1,5 +1,5 @@
 function keep_last_samples(n = 1)
-  return function (x)
+  return function keep(x)
     N = length(size(x))
     inds_before = ntuple(Returns(:), N - 1)
     view(x, inds_before..., size(x, N)-n+1:size(x, N))

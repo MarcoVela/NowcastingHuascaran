@@ -7,39 +7,11 @@ struct ConvLSTM2DCell{A,B,S,M}
   state0::S
 end
 
-mutable struct ConvRecur{T,S,P,N}
-  cell::T
-  state::Tuple{S, S}
-  return_sequences::P
-  repeat_input::N
-end
-Flux.@functor ConvRecur
 
-Flux.trainable(a::ConvRecur) = (; cell = a.cell)
 
-function Base.show(io::IO, m::MIME"text/plain", x::ConvRecur)
-  if get(io, :typeinfo, nothing) === nothing  # e.g. top level in REPL
-    Flux._big_show(io, x)
-  elseif !get(io, :compact, false)  # e.g. printed inside a Vector, but not a Matrix
-    Flux._layer_show(io, x)
-  else
-    show(io, x)
-  end
-end
 
-function _print_convrecur_options(io::IO, l)
-  l.return_sequences === false || print(io, ", return_sequences=", l.return_sequences)
-  l.repeat_input === 1 || print(io, ", repeat_input=", l.repeat_input)
-end
 
-function Base.show(io::IO, m::ConvRecur) 
-  print(io, "ConvRecur(", m.cell)
-  _print_convrecur_options(io, m)
-  print(io, ")")
-end
-#Base.show(io::IO, m::ConvRecur) = Flux._big_show(io, m)
 
-Flux.reset!(m::ConvRecur) = (m.state = m.cell.state0)
 
 # Requirements:
 # The input has to be in the format WHCTN (time and batch in the last two dims)
@@ -116,59 +88,28 @@ function _convlstm2d_output(gates, Wc, c)
   return (h′, c), h′
 end
 
-function (m::ConvLSTM2DCell)((h, c), x_t::Q) where {Q <: AbstractArray{<:Number, 3}}
-  gates = m.Wxh(reshape(x_t, size(x_t)..., 1)) .+ m.Whh(h)
-  _convlstm2d_output(gates, m.Wc, c)
-end
 
 function (m::ConvLSTM2DCell)((h, c), x_t::Q) where {Q <: AbstractArray{<:Number, 4}}
   gates = m.Wxh(x_t) .+ m.Whh(h)
   _convlstm2d_output(gates, m.Wc, c)
 end
 
-@noinline function _conv_recur_helper(x_t, m)
-  h_t, c = m.state
-  gates = x_t .+ m.cell.Whh(h_t)
-  m.state, y = _convlstm2d_output(gates, m.cell.Wc, c)
+function _conv_recur_helper(m, x)
+  m.state, y = m.cell(m.state, x)
   y
 end
 
-function (m::ConvRecur{T, S})(x)::S where {T <: ConvLSTM2DCell, S}
-  m.state, y = m.cell(m.state, x)
-  return y
-end
-
-function (m::ConvRecur{T, S})(x::AbstractArray{Q, 4})::S where {T <: ConvLSTM2DCell, Q <: Number, S}
-  h = [m(x) for x = eachslice(x; dims=4)]
+function (m::Flux.Recur{T, S})(x::AbstractArray{Q, 4}) where {T <: ConvLSTM2DCell, Q <: Number, S}
+  h = [_conv_recur_helper(m, view(x, :,:,:,t:t)) for t in axes(x, 4)]
   sze = size(h[1])
   return reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
-  
-
-  Wxh = m.cell.Wxh(x)
-  if m.return_sequences
-    h = [
-      _conv_recur_helper(Wxh[:,:,:,t:t], m) 
-      for _ = 1:m.repeat_input for t in axes(Wxh, 4)
-      ]
-    sze = size(h[1])
-    reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
-    #reduce((a,b) -> cat(a,b; dims=4), h)
-  else
-    for t = axes(Wxh, 4)
-      x_t = view(Wxh, :, :, :, t:t)
-      h_t, c = m.state
-      gates = x_t .+ m.cell.Whh(h_t)
-      m.state, _ = _convlstm2d_output(gates, m.cell.Wc, c)
-    end
-    m.state[1]
-  end
 end
 
 
-ConvRecur(m::ConvLSTM2DCell; return_sequences, repeat_input) = ConvRecur(m, m.state0, return_sequences, repeat_input)
+Flux.Recur(m::ConvLSTM2DCell) = Flux.Recur(m, m.state0)
 
 
-ConvLSTM2D(a...; return_sequences=false, repeat_input=1, ka...) = ConvRecur(ConvLSTM2DCell(a...; ka...); return_sequences, repeat_input)
+ConvLSTM2D(a...; ka...) = Flux.Recur(ConvLSTM2DCell(a...; ka...))
 
 
 
