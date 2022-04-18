@@ -56,8 +56,8 @@ using Statistics
 function loss(X, y)
     Flux.reset!(model)
     X_dev = device(X)
-    y_pred = model(X_dev)
-    errors = binarycrossentropy(Array(y_pred), y; agg=identity)
+    y_pred = cpu(model(X_dev))
+    errors = binarycrossentropy(y_pred, y; agg=identity)
     sum(mean(errors; dims=(1,2,3)))
 end
 
