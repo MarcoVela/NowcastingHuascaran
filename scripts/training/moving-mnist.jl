@@ -41,7 +41,7 @@ function repeat_input(x)
   reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
 end
 
-model = Chain(
+const model = Chain(
     ConvLSTM2D((64, 64), (5, 5), 1 => 32, pad=SamePad()),
     ConvLSTM2D((64, 64), (3, 3), 32 => 32, pad=SamePad()),
     keep_last,
@@ -50,6 +50,8 @@ model = Chain(
     ConvLSTM2D((64, 64), (1, 1), 32 => 32, pad=SamePad()),
     Conv((3, 3), 32 => 1, σ, pad=SamePad())
 ) |> device
+
+@show model
 
 using CUDA
 using Statistics
@@ -63,8 +65,8 @@ end
 
 function batched_loss(X, y)
   X_dev = device(X)
-  X_gen = (view(X_dev, :, :, :, :, t) for t in axes(X_dev, 5))
-  y_gen = (view(y, :, :, :, :, t) for t in axes(y, 5))
+  X_gen = (copy(view(X_dev, :, :, :, :, t)) for t in axes(X_dev, 5))
+  y_gen = (copy(view(y, :, :, :, :, t)) for t in axes(y, 5))
   mean(loss(X_n, y_n) for (X_n, y_n) in zip(X_gen, y_gen))
 end
 
@@ -88,13 +90,8 @@ using Flux: throttle, params
 p = params(model);
 p.params
 
-d = first(data)
-gs = Flux.gradient(p) do
-  loss(d...)
-end
+println("Starting training!")
 
-Flux.update!(opt, p, gs)
-
-#Flux.train!(loss, p, data, opt)
+Flux.train!(loss, p, data, opt)
 
 model
