@@ -1,4 +1,5 @@
 using Flux
+using CUDA
 
 struct ConvLSTM2DCell{A,B,S,M}
   Wxh::A
@@ -19,14 +20,34 @@ end
 # padding has to be a property
 # we have to decide whether to return either all or none of the outputs of the convlstm2d layer (maybe a utility function, check performance)
 
+function out_dims((width, height), pad, filter, dilation, stride)
+  padding = Flux.calc_padding(Flux.Conv, pad, filter, dilation, stride)
+  out_width = width
+  out_height = height
+  filter_w, filter_h = filter
+  expand_size(p::Number) = ntuple(_ -> Int(p), 2)
+  expand_size(p) = tuple(p...)
+  stride_w, stride_h = expand_size(stride)
+  if length(padding) == 2
+    pad_w, pad_h = padding
+    out_width = ((width + 2*pad_w - filter_w) ÷ stride_w) + 1
+    out_height = ((height + 2*pad_h - filter_h) ÷ stride_h) + 1
+  elseif length(padding) == 4
+    pad_w_top, pad_w_bot, pad_h_top, pad_h_bot = padding
+    out_width = ((width + pad_w_top + pad_w_bot - filter_w) ÷ stride_w) + 1
+    out_height = ((height + pad_h_top + pad_h_bot - filter_h) ÷ stride_h) + 1
+  end
+  out_width, out_height
+end
+
+
 function ConvLSTM2DCell((width, height)::Tuple{<:Integer, <:Integer}, filter::Tuple{<:Integer, <:Integer}, ch::Pair{<:Integer, <:Integer}; 
   init=Flux.glorot_uniform, 
   init_state=Flux.glorot_uniform, 
   pad=0,
   stride=1,
   dilation=1,
-  bias=true
-  )
+  bias=true)
 
   chin, chhid = ch
   chxh = chin => chhid * 4
@@ -99,10 +120,24 @@ function _conv_recur_helper(m, x)
   y
 end
 
+function _cat_last_dim_catdims(n)
+  (ntuple(Returns(false), n-1)..., true)
+end
+
+Flux.Zygote.@ignore function cat_last_dim(X::AbstractArray{T, N}...) where {T, N}
+  shape = (size(first(X))[1:end-1]..., length(X))
+  A = similar(first(X), shape)
+  fill!(A, zero(T))
+  Base.__cat(A, shape, _cat_last_dim_catdims(N), X...)
+end
+
+
 function (m::Flux.Recur{T, S})(x::AbstractArray{Q, 4}) where {T <: ConvLSTM2DCell, Q <: Number, S}
   h = [_conv_recur_helper(m, view(x, :,:,:,t:t)) for t in axes(x, 4)]
   sze = size(h[1])
-  return reshape(reduce(hcat, h), sze[1], sze[2], sze[3], length(h))
+  #cat_last_dim(h...)
+  return cat(h...; dims=4)::typeof(m.state[1])
+  return reshape(reduce((a,b) -> cat(a,b; dims=4), h), sze[1], sze[2], sze[3], length(h))
 end
 
 
