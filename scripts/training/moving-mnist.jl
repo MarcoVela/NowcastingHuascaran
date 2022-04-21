@@ -3,11 +3,13 @@ using DrWatson
 using NPZ
 using Parameters: @with_kw
 @with_kw mutable struct Args
-  lr::Float64 = 5e-2  # Learning rate
+  lr::Float64 = 1e-3  # Learning rate
   batchsize::Int = 2  # Batch size
   throttle::Int = 30  # Throttle timeout
   epochs::Int = 2     # Number of Epochs
 end
+
+
 
 
 args = Args()
@@ -30,27 +32,32 @@ function broadcasted_σ(x)
 end
 
 include(srcdir("layers", "SimpleConvLSTM2D.jl"))
-using Flux.Losses: binarycrossentropy
+using Flux.Losses: binarycrossentropy, logitbinarycrossentropy
+using CUDA
 
 const device = gpu
 
+# function Flux.ChainRulesCore.rrule(::typeof(reverse), x::AbstractArray{T, N}; dims) where {T, N}
+#   reverse!(x; dims), dy -> (Zygote.NoTangent(), reverse!(dy; dims), Zygote.NoTangent())
+# end
 
 
 
-N = 10
+N = 12
 
 
-const model = Chain(
-  SimpleConvLSTM2D((64, 64), (5, 5), 1 => 32, pad=SamePad(), activation=Flux.relu, bias=true),
+model = Chain(
+  TimeDistributed(
+    Conv((3, 3), 1 => 64, σ, pad=SamePad())
+  ),
   KeepLast(
-    SimpleConvLSTM2D((64, 64), (3, 3), 32 => 32, pad=SamePad(), activation=Flux.relu, bias=true)
+    20-N,
+    SimpleConvLSTM2D((64, 64), (3, 3), 64 => 64, pad=SamePad(), activation=Flux.leakyrelu)
   ),
-  RepeatInput(
-    10, 
-    SimpleConvLSTM2D((64, 64), (1, 1), 32 => 32, pad=SamePad(), activation=Flux.relu, bias=true)
+  x -> reverse(x; dims=5),
+  TimeDistributed(
+    Conv((3, 3), 64 => 1, σ, pad=SamePad());
   ),
-  SimpleConvLSTM2D((64, 64), (1, 1), 32 => 32, pad=SamePad(), activation=Flux.relu, bias=true),
-  TimeDistributed(Conv((3, 3), 32 => 1, σ, pad=SamePad())),
 ) |> device
 
 
@@ -77,7 +84,7 @@ tx, ty = (copy(view(mnist_test, :,:,:,1:2,1:N)), copy(view(mnist_test, :,:,:,1:2
 evalcb = () -> @show loss(tx, ty)
 
 using Flux.Optimise
-opt = Optimiser(RADAM(args.lr), ExpDecay())
+opt = ADAM(args.lr)
 
 using Flux: throttle, params
 p = params(model);
@@ -91,15 +98,16 @@ println("Starting training!")
 #   loss(batchmemaybe(d)...)
 # end
 
+sleep(5)
 
-model
+# model
 using Plots
 
 function plot_results(y_pred,y)
   g = @animate for i = axes(y_pred, 3)
     p1 = heatmap(y_pred[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing)
     p2 = heatmap(y[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing)
-    plot(p1,p2, size=(800, 400))
+    plot(p1, p2, size=(800, 400))
   end
   gif(g, fps=2)
 end

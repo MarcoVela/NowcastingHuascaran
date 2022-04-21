@@ -2,9 +2,6 @@ using Flux
 
 # Helpers
 
-
-
-
 function _calc_out_dims((width, height), pad, filter, dilation, stride)
   padding = Flux.calc_padding(Flux.Conv, pad, filter, dilation, stride)
   out_width = width
@@ -26,17 +23,35 @@ function _calc_out_dims((width, height), pad, filter, dilation, stride)
 end
 
 
+function eachlastdim(A::AbstractArray{T,N}) where {T,N}
+  inds_before = ntuple(Returns(:), N-1)
+  return (view(A, inds_before..., i) for i in axes(A, N))
+end
+
+function Flux.ChainRulesCore.rrule(::typeof(eachlastdim), x::AbstractArray{T,N}) where {T,N}
+  lastdims(dy) = (Flux.Zygote.NoTangent(), Flux.Zygote.ChainRules.∇eachslice(Flux.Zygote.unthunk(dy), x, Val(N)))
+  collect(eachlastdim(x)), lastdims
+end
+
+
 function _catn(x::AbstractArray{T, N}...) where {T, N}
   cat(x...; dims=Val(N))
 end
-struct TimeDistributed{M}
+
+maybereverse(::Val{false}) = (x; dims) -> x
+maybereverse(::Val{true}) = reverse
+struct TimeDistributed{M, R}
   m::M
+  reorder::R
 end
 
+TimeDistributed(m; reverse::Bool = false) = TimeDistributed(m, maybereverse(Val(reverse)))
+
 function (t::TimeDistributed)(x::AbstractArray{T, 5}) where {T}
-  h = [t.m(x_t) for x_t in eachslice(x; dims=5)]
+  x_rev = t.reorder(x; dims=5)
+  h = [t.m(x_t) for x_t in eachlastdim(x_rev)]
   sze = size(h[1])
-  reshape(cat(h...; dims=ndims(h[1])), sze..., length(h))
+  reshape(reduce(_catn, h), sze..., length(h))
 end
 
 Flux.@functor TimeDistributed
@@ -44,6 +59,16 @@ Flux.@functor TimeDistributed
 Flux.trainable(l::TimeDistributed) = (; m=l.m)
 
 Base.show(io::IO, m::TimeDistributed) = print(io,"TimeDistributed(", m.m, ")")# Flux._big_show(io, m)
+
+function Base.show(io::IO, m::MIME"text/plain", x::TimeDistributed)
+  if get(io, :typeinfo, nothing) === nothing  # e.g. top level in REPL
+    Flux._big_show(io, x)
+  elseif !get(io, :compact, false)  # e.g. printed inside a Vector, but not a Matrix
+    Flux._layer_show(io, x)
+  else
+    show(io, x)
+  end
+end
 
 
 struct KeepLast{N, M<:Flux.Recur}
@@ -79,9 +104,18 @@ end
 
 Base.show(io::IO, k::KeepLast) = print(io,"KeepLast(", k.m, ")")# Flux._big_show(io, m)
 
+struct Reverse
+end
 
+function (r::Reverse)(x::AbstractArray{T, N}) where {T, N}
+  reverse(x; dims=N)
+end
 
-function Base.show(io::IO, m::MIME"text/plain", x::TimeDistributed)
+Flux.@functor Reverse
+
+Flux.trainable(::Reverse) = (;)
+
+function Base.show(io::IO, m::MIME"text/plain", x::Reverse)
   if get(io, :typeinfo, nothing) === nothing  # e.g. top level in REPL
     Flux._big_show(io, x)
   elseif !get(io, :compact, false)  # e.g. printed inside a Vector, but not a Matrix
@@ -90,6 +124,11 @@ function Base.show(io::IO, m::MIME"text/plain", x::TimeDistributed)
     show(io, x)
   end
 end
+
+Base.show(io::IO, r::Reverse) = print(io,"Reverse(", r.m, ")")# Flux._big_show(io, m)
+
+
+
 
 
 struct RepeatInput{N, M}
@@ -138,7 +177,7 @@ function SimpleConvLSTM2DCell((w,h)::Tuple{<:Integer, <:Integer}, filter::Tuple{
   init = Flux.glorot_uniform, 
   init_state = Flux.zeros32,
   initb = Flux.zeros32,
-  activation = tanh,
+  activation = identity,
   σ = σ,
   pad = 0,
   stride = 1,
@@ -172,14 +211,15 @@ end
 
 # Receives
 
-function _lstm_output((h, c), g, activ, σ)
+function _lstm_output((h, c), g, activ)
   _activ = NNlib.fast_act(activ, g)
   _σ = NNlib.fast_act(σ, g)
+  _tanh = NNlib.fast_act(tanh, g)
   o = size(h, 1)
   input, forget, cell, output = Flux.multigate(g, o, Val(4))
-  c′ = @. _σ(forget) * c + _σ(input) * _activ(cell)
-  h′ = @. _σ(output) * _activ(c′)
-  return (h′, c′), h′ # Removing Flux.reshape_cell_output 
+  c′ = @. _σ(forget) * c + _σ(input) * _tanh(cell)
+  h′ = @. _σ(output) * _tanh(c′)
+  return (h′, c′), _activ.(h′) # Removing Flux.reshape_cell_output 
 end
 
 
@@ -187,7 +227,7 @@ function (m::SimpleConvLSTM2DCell)((h, c), x::AbstractArray{T, 4}) where {T}
   # h_size = Flux.outputsize(m.m[1].layers[1], size(x))[begin:4-1]
   h_mat = reshape(h, m.state_shape..., size(h, 2)) # size of hidden state is initialized to 1 and can change if the batch size increases
   gates = Flux.flatten(m.Wxh(x) .+ m.Whh(h_mat)) .+ m.b
-  (h′, c′), y = _lstm_output((h, c), gates, m.activation, m.σ) # m.lstm((h, c), Flux.flatten(m.conv(x, h_mat))) # all are matrices and second dimension is batch size
+  (h′, c′), y = _lstm_output((h, c), gates, m.activation) # m.lstm((h, c), Flux.flatten(m.conv(x, h_mat))) # all are matrices and second dimension is batch size
   (h′, c′), reshape(y, m.state_shape..., size(x, 4))
 end
 
@@ -205,7 +245,7 @@ end
 
 
 function (m::Flux.Recur{<:SimpleConvLSTM2DCell})(x::AbstractArray{T, 5}) where {T}
-  h = [m(x_t) for x_t in eachslice(x; dims=5)]
+  h = [m(x_t) for x_t in eachlastdim(x)]
   sze = size(h[1])
   reshape(reduce(_catn, h), sze..., length(h))
 end
