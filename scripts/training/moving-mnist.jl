@@ -43,20 +43,28 @@ const device = gpu
 
 
 
-N = 12
+N = 16
 
 
 model = Chain(
-  TimeDistributed(
-    Conv((3, 3), 1 => 64, σ, pad=SamePad())
-  ),
   KeepLast(
-    20-N,
-    SimpleConvLSTM2D((64, 64), (3, 3), 64 => 64, pad=SamePad(), activation=Flux.leakyrelu)
+    SimpleConvLSTM2D((64, 64), (3, 3),  1 => 64, activation=x -> leakyrelu(x, 0.2f0), pad=SamePad()),
   ),
-  x -> reverse(x; dims=5),
   TimeDistributed(
-    Conv((3, 3), 64 => 1, σ, pad=SamePad());
+    AdaptiveMaxPool((16, 16)),
+  ),
+  Dropout(.25),
+  RepeatInput(
+    20-N,
+    SimpleConvLSTM2D((16, 16), (3, 3), 64 => 64, activation=x -> leakyrelu(x, 0.2f0)),
+  ),
+  TimeDistributed(
+    Chain(
+      Conv((3, 3), 64 => 48, x -> leakyrelu(x, 0.2f0)),
+      Flux.flatten,
+      Dense(48*12*12 => 64*64, σ),
+      x -> reshape(x, 64, 64, 1, :)
+    )
   ),
 ) |> device
 
@@ -74,14 +82,15 @@ end
 using Flux.Data: DataLoader
 mnist_x, mnist_y = copy(view(mnist_train, :, :, :, :, 1:N)), copy(view(mnist_train, :, :, :, :, N+1:20));
 
-x_d = (copy(view(mnist_train, :, :, :, t:t+args.batchsize-1, 1:N)) for t in 1:args.batchsize:size(mnist_x, 4))
-y_d = (copy(view(mnist_train, :, :, :, t:t+args.batchsize-1, N+1:20)) for t in 1:args.batchsize:size(mnist_y, 4))
+x_d = (copy(view(mnist_train, :, :, :, t:t+args.batchsize-1, 1:N)) for t in 1:args.batchsize:size(mnist_x, 4)-args.batchsize+1)
+y_d = (copy(view(mnist_train, :, :, :, t:t+args.batchsize-1, N+1:20)) for t in 1:args.batchsize:size(mnist_y, 4)-args.batchsize+1)
+
 data = zip(x_d, y_d)
 
 
 tx, ty = (copy(view(mnist_test, :,:,:,1:2,1:N)), copy(view(mnist_test, :,:,:,1:2,N+1:20)));
 
-evalcb = () -> @show loss(tx, ty)
+evalcb = () -> (@show loss(tx, ty); nothing)
 
 using Flux.Optimise
 opt = ADAM(args.lr)
@@ -97,16 +106,28 @@ println("Starting training!")
 # gs = gradient(ps) do
 #   loss(batchmemaybe(d)...)
 # end
+println("Sleeping for 10 secs")
+GC.gc(true)
+sleep(10)
+CUDA.reclaim()
+println("Wake up! Time to plot")
 
-sleep(5)
 
 # model
 using Plots
 
-function plot_results(y_pred,y)
-  g = @animate for i = axes(y_pred, 3)
+function plot_results(x, y_pred, y)
+  ps = []
+  for i = axes(x, 3)
+    p = heatmap(x[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing)
+    push!(ps, (p, p))
+  end
+  for i = axes(y_pred, 3)
     p1 = heatmap(y_pred[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing)
     p2 = heatmap(y[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing)
+    push!(ps, (p1, p2))
+  end
+  g = @animate for (p1, p2) in ps
     plot(p1, p2, size=(800, 400))
   end
   gif(g, fps=2)
@@ -114,5 +135,6 @@ end
 
 Flux.reset!(model)
 ty_pred = cpu(model(gpu(tx)));
+i = 2;
 nothing
 #plot_results(ty_pred[:,:,1,1,:], ty[:,:,1,1,:])

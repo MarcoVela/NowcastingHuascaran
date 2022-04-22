@@ -23,14 +23,40 @@ function _calc_out_dims((width, height), pad, filter, dilation, stride)
 end
 
 
-function eachlastdim(A::AbstractArray{T,N}) where {T,N}
+function eachlastdim(A::AbstractArray{T,N}, rev::Val{R} = Val(false)) where {T,N,R}
   inds_before = ntuple(Returns(:), N-1)
-  return (view(A, inds_before..., i) for i in axes(A, N))
+  ind = R ? reverse(axes(A, N)) : axes(A, N) #  ?  : 
+  return (view(A, inds_before..., i) for i in ind)
 end
 
-function Flux.ChainRulesCore.rrule(::typeof(eachlastdim), x::AbstractArray{T,N}) where {T,N}
-  lastdims(dy) = (Flux.Zygote.NoTangent(), Flux.Zygote.ChainRules.∇eachslice(Flux.Zygote.unthunk(dy), x, Val(N)))
-  collect(eachlastdim(x)), lastdims
+using Flux: Zygote, ChainRulesCore
+using Zygote: ChainRules
+
+function ∇eachslice(dys_raw, x::AbstractArray, vd::Val{dim}, vr::Val{rev}) where {dim, rev}
+  dys = Zygote.unthunk(dys_raw)
+  i1 = findfirst(dy -> dy isa AbstractArray, dys)
+  if i1 === nothing  # all slices are Zero!
+      return ChainRules._zero_fill!(similar(x, float(eltype(x)), axes(x)))
+  end
+  T = promote_type(eltype(dys[i1]), eltype(x))
+  # The whole point of this gradient is that we can allocate one `dx` array:
+  dx = similar(x, T, axes(x))
+  # ind = ifelse(rev, reverse(axes(x, dim)), axes(x, dim)) #  ?  : 
+  for i in axes(x, dim)
+      slice = selectdim(dx, dim, i)
+      _i = ifelse(rev, size(x, dim) - i + 1, i) # MarcoVela: Check if we have to access array in inverse order
+      if dys[_i] isa Zygote.AbstractZero
+        ChainRules._zero_fill!(slice)  # Avoids this: copyto!([1,2,3], ZeroTangent()) == [0,2,3]
+      else
+          copyto!(slice, dys[_i])
+      end
+  end
+  return Zygote.ProjectTo(x)(dx)
+end
+
+function ChainRulesCore.rrule(::typeof(eachlastdim), x::AbstractArray{T,N}, rev::Val{R}) where {T,N,R}
+  lastdims(dy) = (Zygote.NoTangent(), ∇eachslice(Zygote.unthunk(dy), x, Val(N), Val(R)), Zygote.NoTangent())
+  collect(eachlastdim(x, rev)), lastdims
 end
 
 
@@ -45,11 +71,10 @@ struct TimeDistributed{M, R}
   reorder::R
 end
 
-TimeDistributed(m; reverse::Bool = false) = TimeDistributed(m, maybereverse(Val(reverse)))
+TimeDistributed(m; reverse::Bool = false) = TimeDistributed(m, Val(reverse))
 
 function (t::TimeDistributed)(x::AbstractArray{T, 5}) where {T}
-  x_rev = t.reorder(x; dims=5)
-  h = [t.m(x_t) for x_t in eachlastdim(x_rev)]
+  h = [t.m(x_t) for x_t in eachlastdim(x, t.reorder)]
   sze = size(h[1])
   reshape(reduce(_catn, h), sze..., length(h))
 end
@@ -113,19 +138,9 @@ end
 
 Flux.@functor Reverse
 
-Flux.trainable(::Reverse) = (;)
 
-function Base.show(io::IO, m::MIME"text/plain", x::Reverse)
-  if get(io, :typeinfo, nothing) === nothing  # e.g. top level in REPL
-    Flux._big_show(io, x)
-  elseif !get(io, :compact, false)  # e.g. printed inside a Vector, but not a Matrix
-    Flux._layer_show(io, x)
-  else
-    show(io, x)
-  end
-end
 
-Base.show(io::IO, r::Reverse) = print(io,"Reverse(", r.m, ")")# Flux._big_show(io, m)
+
 
 
 
@@ -156,6 +171,7 @@ Base.show(io::IO, r::RepeatInput) = print(io, "RepeatInput(", r.n, ", ", r.m, ")
 
 Flux.@functor RepeatInput
 
+Flux.trainable(r::RepeatInput) = (; m=r.m)
 
 # Layers:
 
@@ -217,9 +233,9 @@ function _lstm_output((h, c), g, activ)
   _tanh = NNlib.fast_act(tanh, g)
   o = size(h, 1)
   input, forget, cell, output = Flux.multigate(g, o, Val(4))
-  c′ = @. _σ(forget) * c + _σ(input) * _tanh(cell)
-  h′ = @. _σ(output) * _tanh(c′)
-  return (h′, c′), _activ.(h′) # Removing Flux.reshape_cell_output 
+  c′ = @. _σ(forget) * c + _σ(input) * _activ(cell)
+  h′ = @. _σ(output) * _activ(c′)
+  return (h′, c′), (h′) # Removing Flux.reshape_cell_output 
 end
 
 
@@ -245,7 +261,7 @@ end
 
 
 function (m::Flux.Recur{<:SimpleConvLSTM2DCell})(x::AbstractArray{T, 5}) where {T}
-  h = [m(x_t) for x_t in eachlastdim(x)]
+  h = [m(x_t) for x_t in eachlastdim(x, Val(false))]
   sze = size(h[1])
   reshape(reduce(_catn, h), sze..., length(h))
 end
