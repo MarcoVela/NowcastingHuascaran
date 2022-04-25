@@ -205,7 +205,7 @@ function SimpleConvLSTM2DCell((w,h)::Tuple{<:Integer, <:Integer}, filter::Tuple{
   chhh = chhid => chhid * 4
 
   Wxh = Conv(filter, chxh; init, pad=pad, stride=stride, bias=true)
-  Whh = Conv(filter, chhh; init, pad=SamePad(), stride=stride, bias=true)
+  Whh = Conv(filter, chhh; init, pad=SamePad(), bias=true)
 
   out_width, out_height = _calc_out_dims((w, h), pad, filter, dilation, stride)
 

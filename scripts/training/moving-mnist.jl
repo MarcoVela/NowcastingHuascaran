@@ -20,7 +20,7 @@ mnist_whole = @time NPZ.npzread(datadir("exp_raw", "moving-mnist", "mnist_test_s
 mnist_whole = reshape(mnist_whole, size(mnist_whole)[1:2]..., 1, size(mnist_whole)[3:4]...);
 mnist_whole = permutedims(mnist_whole, reverse(1:ndims(mnist_whole)));
 @show size(mnist_whole);
-train_test_split = .8
+train_test_split = .9
 TOTAL_SAMPLES = size(mnist_whole, 4)
 mnist_train = view(mnist_whole, :, :, :, 1:Int(TOTAL_SAMPLES * train_test_split), :);
 mnist_test = view(mnist_whole, :, :, :, Int(TOTAL_SAMPLES * train_test_split)+1:TOTAL_SAMPLES, :);
@@ -43,12 +43,11 @@ const device = gpu
 
 
 
-N = 16
-
+N = 12
 
 model = Chain(
   KeepLast(
-    SimpleConvLSTM2D((64, 64), (3, 3),  1 => 64, activation=x -> leakyrelu(x, 0.2f0), pad=SamePad()),
+    SimpleConvLSTM2D((64, 64), (5, 5),  1 => 64, stride=2, activation=Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
   ),
   TimeDistributed(
     AdaptiveMaxPool((16, 16)),
@@ -56,14 +55,15 @@ model = Chain(
   Dropout(.25),
   RepeatInput(
     20-N,
-    SimpleConvLSTM2D((16, 16), (3, 3), 64 => 64, activation=x -> leakyrelu(x, 0.2f0)),
+    SimpleConvLSTM2D((16, 16), (3, 3), 64 => 64, activation=Base.Fix2(leakyrelu, 0.2f0)),
   ),
   TimeDistributed(
     Chain(
-      Conv((3, 3), 64 => 48, x -> leakyrelu(x, 0.2f0)),
-      Flux.flatten,
-      Dense(48*12*12 => 64*64, σ),
-      x -> reshape(x, 64, 64, 1, :)
+      ConvTranspose((3, 3), 64 => 64, Base.Fix2(leakyrelu, 0.2f0)),
+      ConvTranspose((5, 5), 64 => 32, Base.Fix2(leakyrelu, 0.2f0)),
+      ConvTranspose((7, 7), 32 => 16, Base.Fix2(leakyrelu, 0.2f0), stride=3),
+      Conv((3, 3), 16 => 8, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      Conv((3, 3), 8 => 1, σ, pad=SamePad()),
     )
   ),
 ) |> device
@@ -89,6 +89,8 @@ data = zip(x_d, y_d)
 
 
 tx, ty = (copy(view(mnist_test, :,:,:,1:2,1:N)), copy(view(mnist_test, :,:,:,1:2,N+1:20)));
+tx2, ty2 = (copy(view(mnist_test, :,:,:,1:10,1:N)), copy(view(mnist_test, :,:,:,1:10,N+1:20)));
+
 
 evalcb = () -> (@show loss(tx, ty); nothing)
 
@@ -101,7 +103,7 @@ p.params
 
 println("Starting training!")
 
-@time Flux.train!(loss, p, data, opt; cb=throttle(evalcb, 30))
+@time Flux.train!(loss, params(model), data, opt; cb=throttle(evalcb, 30))
 
 # gs = gradient(ps) do
 #   loss(batchmemaybe(d)...)
@@ -134,7 +136,56 @@ function plot_results(x, y_pred, y)
 end
 
 Flux.reset!(model)
-ty_pred = cpu(model(gpu(tx)));
+ty_pred = cpu(model(device(tx)));
 i = 2;
 nothing
 #plot_results(ty_pred[:,:,1,1,:], ty[:,:,1,1,:])
+
+using Statistics
+
+function plot_crossentropy_framewise(y_pred, y)
+  cross = binarycrossentropy(y_pred, y; agg=identity)
+  framewise = mean(cross; dims=(1,2))[:]
+  plot(framewise, ylims=(0, maximum(framewise) * 1.5), legend=false)
+end
+
+function csi_framewise(y_pred, y; threshold = 0.5)
+  cortados = y_pred .> threshold
+  cort_y = y .> .9
+  a = sum(cortados .== cort_y .== 1; dims=(1,2))[:]
+  b = sum((cortados .== 1) .& (cort_y .== 0); dims=(1,2))[:]
+  c = sum((cortados .== 0) .& (cort_y .== 1); dims=(1,2))[:]
+  # d = sum(cortados .== cort_y .== 0; dims=(1,2))[:]
+  @. a / (a + b + c)
+end
+
+function plot_csi_framewise(y_pred, y; thresholds=0.1:.15:.9)
+  t = size(y, 3)
+  ps = map(x -> begin
+    d = csi_framewise(y_pred, y; threshold=x)
+    label = "umbral: $x - maximo: $(round(maximum(d), digits=2))"
+    plot(d, label=label, xticks=1:t, ylims=(0,1))
+  end, thresholds)
+  plot(ps...; layout=(length(thresholds), 1), size=(800, 900))
+end
+
+function accuracy_framewise(y_pred, y; threshold = 0.5)
+  cortados = y_pred .> threshold
+  cort_y = y .> .9
+  a = sum(cortados .== cort_y .== 1; dims=(1,2))[:]
+  b = sum((cortados .== 1) .& (cort_y .== 0); dims=(1,2))[:]
+  c = sum((cortados .== 0) .& (cort_y .== 1); dims=(1,2))[:]
+  d = sum(cortados .== cort_y .== 0; dims=(1,2))[:]
+  @. (a + d) / (a + b + c + d)
+end
+
+function plot_acc_framewise(y_pred, y; thresholds=0.1:.15:.9)
+  t = size(y, 3)
+  ps = map(x -> begin
+    d = accuracy_framewise(y_pred, y; threshold=x)
+    label = "umbral: $x - maximo: $(round(maximum(d), digits=2))"
+    plot(d, label=label, xticks=1:t, ylims=(0,1))
+  end, thresholds)
+  plot(ps...; layout=(length(thresholds), 1), size=(900, 900))
+end
+
