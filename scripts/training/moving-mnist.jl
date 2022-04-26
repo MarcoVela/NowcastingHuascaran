@@ -3,8 +3,8 @@ using DrWatson
 using NPZ
 using Parameters: @with_kw
 @with_kw mutable struct Args
-  lr::Float64 = 1e-3  # Learning rate
-  batchsize::Int = 2  # Batch size
+  lr::Float64 = 2e-4  # Learning rate
+  batchsize::Int = 4  # Batch size
   throttle::Int = 30  # Throttle timeout
   epochs::Int = 2     # Number of Epochs
 end
@@ -46,24 +46,36 @@ const device = gpu
 N = 12
 
 model = Chain(
-  KeepLast(
-    SimpleConvLSTM2D((64, 64), (5, 5),  1 => 64, stride=2, activation=Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
-  ),
   TimeDistributed(
-    AdaptiveMaxPool((16, 16)),
+    Chain(
+      Conv((3,3),  1=>32, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      Conv((3,3), 32=>32, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad(), stride=2),
+    
+      Conv((3,3),  32=>64, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      Conv((3,3),  64=>64, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad(), stride=2),
+
+      Conv((3,3),  64=>128, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      Conv((3,3), 128=>128, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad(), stride=2),
+    ),
+  ),
+  KeepLast(
+    SimpleConvLSTM2D((8, 8), (3, 3),  128 => 128, pad=SamePad()),
   ),
   Dropout(.25),
   RepeatInput(
     20-N,
-    SimpleConvLSTM2D((16, 16), (3, 3), 64 => 64, activation=Base.Fix2(leakyrelu, 0.2f0)),
+    SimpleConvLSTM2D((8, 8), (3, 3), 128 => 128, pad=SamePad()),
   ),
   TimeDistributed(
     Chain(
-      ConvTranspose((3, 3), 64 => 64, Base.Fix2(leakyrelu, 0.2f0)),
-      ConvTranspose((5, 5), 64 => 32, Base.Fix2(leakyrelu, 0.2f0)),
-      ConvTranspose((7, 7), 32 => 16, Base.Fix2(leakyrelu, 0.2f0), stride=3),
-      Conv((3, 3), 16 => 8, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
-      Conv((3, 3), 8 => 1, σ, pad=SamePad()),
+      ConvTranspose((3,3), 128=>128, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      ConvTranspose((3,3), 128=>64, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad(), stride=2),
+    
+      ConvTranspose((3,3), 64=>64, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      ConvTranspose((3,3), 64=>32, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad(), stride=2),
+
+      ConvTranspose((3,3), 32=>32, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
+      ConvTranspose((3,3), 32=>1, σ, pad=SamePad(), stride=2),
     )
   ),
 ) |> device
