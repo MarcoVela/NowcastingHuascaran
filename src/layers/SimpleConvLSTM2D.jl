@@ -24,7 +24,7 @@ end
 
 
 function eachlastdim(A::AbstractArray{T,N}, rev::Val{R} = Val(false)) where {T,N,R}
-  inds_before = ntuple(Returns(:), N-1)
+  inds_before = ntuple(_ -> :, N-1)
   ind = R ? reverse(axes(A, N)) : axes(A, N) #  ?  : 
   return (view(A, inds_before..., i) for i in ind)
 end
@@ -106,7 +106,7 @@ function KeepLast(m)
 end
 
 function (k::KeepLast)(x::AbstractArray{T, N}) where {T, N}
-  before_dims = ntuple(Returns(:), N-1)
+  before_dims = ntuple(_ -> :, N-1)
   n2 = size(x, N)
   discarted = ifelse(n2 - k.n < 0, 0, n2 - k.n)
   k.m(view(x, before_dims..., 1:discarted))
