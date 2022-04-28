@@ -5,6 +5,7 @@ authors = ["Marco Vela <mvelar@uni.pe>"]
 AWS = "fbe9abb3-538b-5e4e-ba9e-bc94f4f92ebc"
 AWSCore = "4f1ea46c-232b-54a6-9b17-cc2d0f3e6598"
 AWSS3 = "1c724243-ef5b-51ab-93f4-b0a88ac62a95"
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ClimateBase = "35604d93-0fb8-4872-9436-495b01d137e2"
