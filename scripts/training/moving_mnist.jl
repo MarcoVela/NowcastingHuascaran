@@ -40,6 +40,12 @@ end
 DrWatson.default_allowed(::Args) = (Any,)
 DrWatson.allaccess(::Args) = (:lr, :opt, :batchsize, :loss)
 const args = Args(opt=ADAM, loss=binarycrossentropy)
+args.lr = DrWatsonn.readenv("lr", args.lr)
+args.batchsize = DrWatsonn.readenv("batchsize", args.batchsize)
+args.throttle = DrWatsonn.readenv("throttle", args.throttle)
+args.epochs = DrWatsonn.readenv("epochs", args.epochs)
+args.split_ratio = DrWatsonn.readenv("split_ratio", args.split_ratio)
+args.dropout = DrWatsonn.readenv("dropout", args.dropout)
 const foldername = savename(args)
 const TOTAL_FRAMES = 20
 const N = 12
