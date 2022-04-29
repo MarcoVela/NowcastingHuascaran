@@ -1,3 +1,6 @@
+import Pkg
+Pkg.add("Plots")
+
 using Plots
 
 include("metrics.jl")

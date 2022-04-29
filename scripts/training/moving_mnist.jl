@@ -11,7 +11,6 @@ const dataset = "moving_mnist"
 @info "Including source" architecture dataset
 
 include(srcdir("dataset", "$dataset.jl"))
-include(srcdir("layers", "ConvLSTM2D.jl"))
 include(srcdir("models", "$architecture.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))

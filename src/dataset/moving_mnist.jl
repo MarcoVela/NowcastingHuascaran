@@ -1,3 +1,6 @@
+import Pkg
+Pkg.add("HDF5")
+
 using HDF5
 function get_dataset(; train_test_ratio, batchsize, N)
   dataset_path = datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5")

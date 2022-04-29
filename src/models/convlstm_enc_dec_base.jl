@@ -1,3 +1,5 @@
+include(srcdir("layers", "ConvLSTM2D.jl"))
+
 function build_model(; N_out, device, dropout)
   model = Chain(
     TimeDistributed(

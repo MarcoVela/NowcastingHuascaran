@@ -1,3 +1,6 @@
+import Pkg
+Pkg.add(["Flux", "ProgressMeter"])
+
 using Flux
 using Flux.Optimise: StopException, SkipException
 using ProgressMeter

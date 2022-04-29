@@ -1,3 +1,6 @@
+import Pkg
+Pkg.add("Plots")
+
 using Plots
 
 function plot_results(x, y_pred, y)
