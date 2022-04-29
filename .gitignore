@@ -435,3 +435,5 @@ $RECYCLE.BIN/
 artifacts
 
 *.exe
+
+.vscode
