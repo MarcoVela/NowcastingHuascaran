@@ -47,7 +47,7 @@ function ∇eachslice(dys_raw, x::AbstractArray, vd::Val{dim}) where {dim}
       if dys[i] isa Zygote.AbstractZero
         ChainRules._zero_fill!(slice)  # Avoids this: copyto!([1,2,3], ZeroTangent()) == [0,2,3]
       else
-          copyto!(slice, dys[_i])
+          copyto!(slice, dys[i])
       end
   end
   return Zygote.ProjectTo(x)(dx)
@@ -66,8 +66,6 @@ end
 struct TimeDistributed{M}
   m::M
 end
-
-TimeDistributed(m) = TimeDistributed(m)
 
 function (t::TimeDistributed)(x::AbstractArray{T, 5}) where {T}
   h = [t.m(x_t) for x_t in eachlastdim(x)]

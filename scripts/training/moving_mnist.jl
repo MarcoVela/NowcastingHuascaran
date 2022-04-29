@@ -1,9 +1,16 @@
 using DrWatson
 @quickactivate
 
-const architecture = "convlstm_enc_dec_01"
+const architecture = get(ENV, "architecture", nothing) #"convlstm_enc_dec_01"
+if isnothing(architecture)
+  @error "architecture env var must not be empty"
+  exit(1)
+end
+const dataset = "moving_mnist"
 
-include(srcdir("dataset", "moving_mnist.jl"))
+@info "Including source" architecture dataset
+
+include(srcdir("dataset", "$dataset.jl"))
 include(srcdir("layers", "ConvLSTM2D.jl"))
 include(srcdir("models", "$architecture.jl"))
 include(srcdir("utils", "logging.jl"))
@@ -14,32 +21,40 @@ using Flux
 using Flux.Losses: binarycrossentropy, logitbinarycrossentropy
 using Flux: throttle, params
 using CUDA
-using ProgressMeter
 using Statistics
 using Flux.Optimise
 using NamedTupleTools
+using Dates
 
 @kwdef mutable struct Args{O, F}
   lr::Float64 = 2e-4  # Learning rate
-  batchsize::Int = 4  # Batch size
+  batchsize::Int = 1  # Batch size
   throttle::Int = 30  # Throttle timeout
   epochs::Int = 2     # Number of Epochs
   split_ratio::Float64 = .9
+  dropout::Float64 = .2
   opt::O
   loss::F
 end
 
 DrWatson.default_allowed(::Args) = (Any,)
 DrWatson.allaccess(::Args) = (:lr, :opt, :batchsize, :loss)
-
 const args = Args(opt=ADAM, loss=binarycrossentropy)
-
-
+const foldername = savename(args)
+const TOTAL_FRAMES = 20
 const N = 12
-const device = gpu
+const device = CUDA.functional(true) ? gpu : cpu
 
-const model = build_model(; N_out=20-N, device=device)
-const train_data, test_data = get_dataset(; train_test_ratio=args.split_ratio, batchsize=args.batchsize, N=N)
+@info "Building model"
+
+const model = build_model(; N_out=TOTAL_FRAMES-N, device=device, dropout=args.dropout)
+
+show(stdout, "text/plain", cpu(model))
+println(stdout)
+
+@info "Obtaining dataset"
+
+const train_data, test_data = @time get_dataset(; train_test_ratio=args.split_ratio, batchsize=args.batchsize, N=N)
 
 
 function loss(X, y)
@@ -52,57 +67,71 @@ end
 train_x, train_y = first(train_data)
 test_x, test_y = first(test_data)
 
-const logger, close_logger = get_logger()
+const logfile = datadir("models", 
+                     savename((; architecture, dataset)), 
+                     foldername, 
+                     "logs.log")
+mkpath(dirname(logfile))
+const logger, close_logger = get_logger(logfile)
 
 Base.with_logger(logger) do 
   nt = ntfromstruct(args)
-  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_size) nt...
+  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) nt...
 end
 
-function log_test_loss(epoch)
-  val, exec_time = CUDA.@timed loss(test_x, test_y)
+function log_loss(epoch)
+  val_test, exec_time_test = CUDA.@timed loss(test_x, test_y)
+  val_train, exec_time_train = CUDA.@timed loss(train_x, train_y)
+  exec_time = mean((exec_time_test, exec_time_train))
   Base.with_logger(logger) do 
-    @info "TEST_LOSS_DURING_TRAIN" loss=val epoch exec_time
-  end
-end
-
-function log_train_loss(epoch)
-  val, exec_time = CUDA.@timed loss(train_x, train_y)
-  Base.with_logger(logger) do 
-    @info "TRAIN_LOSS_DURING_TRAIN" loss=val epoch exec_time
+    @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
   end
 end
 
 const ps = params(model)
 const opt = args.opt(args.lr)
 
+@info "Time of first pullback"
+@time Flux.pullback(loss, train_x, train_y);
+
+@info "Starting training for $(args.epochs) epochs"
+
 
 for epoch in 1:args.epochs
-  log_test_loss_cb = throttle(() -> log_test_loss(epoch), args.throttle)
-  log_train_loss_cb = throttle(() -> log_train_loss(epoch), args.throttle)
-  p = Progress(length(train_data); showspeed=true)
-  callbacks = Flux.runall([log_test_loss_cb, log_train_loss_cb])
-  train_time = CUDA.@elapsed train_single_epoch!(ps, loss, train_data, opt, cb=callbacks)
+  log_loss_cb = throttle(() -> log_loss(epoch), args.throttle)
+  @info "Training..." epoch
+  train_time = CUDA.@elapsed train_single_epoch!(ps, loss, train_data, opt, cb=log_loss_cb)
   Base.with_logger(logger) do
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
-  test_losses, test_time = CUDA.@timed [loss(X, y) for (X, y) in test_data]
+  @info "Testing..." epoch
+  test_losses, test_time = CUDA.@timed loss_single_epoch(loss, test_data)
   mean_loss = mean(test_losses)
 
   Base.with_logger(logger) do
     @info "EPOCH_TEST" epoch mean_loss=mean_loss var_loss=var(test_losses) exec_time=test_time
   end
-  foldername = savename(args)
   args_dict = convert(Dict, ntfromstruct(args))
-  @tag!(args_dict, storepatch=true)
+  args_dict = Dict{Symbol, Any}(args_dict)
   Flux.reset!(model)
   args_dict[:model] = cpu(model)
-  args_dict[:loss] = mean_losses
-  filename = datadir("models", architecture, foldername, savename((loss=mean_loss, epoch), "bson"; digits=5))
+  args_dict[:test_loss] = mean_loss
+  args_dict[:epoch] = epoch
+  args_dict[:date] = Dates.now()
+  args_dict[:architecture] = architecture
+  args_dict[:dataset] = dataset
+  @tag!(args_dict, storepatch=true)
+  filename = datadir("models", 
+                     savename((; architecture, dataset)), 
+                     foldername, 
+                     savename((loss=mean_loss, epoch), "bson"; digits=5))
   safesave(filename, args_dict)
 end
+
+@info "Finished training"
 
 Base.with_logger(logger) do 
   @info "FINISH" 
 end
 
+close_logger()

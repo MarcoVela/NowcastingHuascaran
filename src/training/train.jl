@@ -3,7 +3,7 @@ using Flux.Optimise: StopException, SkipException
 using ProgressMeter
 
 function train_single_epoch!(ps, loss, data, opt; cb=() -> ())
-  cb = Flux.runall(cb)
+  cb = Optimise.runall(cb)
   itrsz = Base.IteratorSize(typeof(data))
   n = (itrsz == Base.HasLength()) || (itrsz == Base.HasShape{1}()) ? length(data) : 0
   p = Progress(n; showspeed=true, enabled=!iszero(n))
@@ -26,4 +26,17 @@ function train_single_epoch!(ps, loss, data, opt; cb=() -> ())
       ProgressMeter.next!(p)
     end
   end
+end
+
+function loss_single_epoch(loss, data)
+  losses = zeros((0,))
+  itrsz = Base.IteratorSize(typeof(data))
+  n = (itrsz == Base.HasLength()) || (itrsz == Base.HasShape{1}()) ? length(data) : 0
+  sizehint!(losses, n)
+  p = Progress(n; showspeed=true, enabled=!iszero(n))
+  for (X, y) in data
+    push!(losses, loss(X, y))
+    ProgressMeter.next!(p)
+  end
+  losses
 end
