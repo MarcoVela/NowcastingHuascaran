@@ -1,5 +1,5 @@
 using Flux
-using Flux: StopException, SkipException
+using Flux.Optimise: StopException, SkipException
 using ProgressMeter
 
 function train_single_epoch!(ps, loss, data, opt; cb=() -> ())
