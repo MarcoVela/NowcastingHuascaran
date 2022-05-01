@@ -1,0 +1,71 @@
+import Pkg
+
+using JSON3
+using Dates
+using StructTypes
+
+struct TrainPayload
+  exec_time::Float64
+  train_loss::Float64
+  test_loss::Float64
+  epoch::Int
+end
+
+struct TestPayload
+  var_loss::Float64
+  exec_time::Float64
+  mean_loss::Float64
+  epoch::Int
+end
+
+struct StartPayload
+  batchsize::Int
+  opt::String
+  test_size::Int
+  loss::String
+  split_ratio::Float64
+  train_size::Int
+  throttle::Int
+  epochs::Int
+  dropout::Float64
+  lr::Float64
+end
+
+StructTypes.StructType(::Type{TrainPayload}) = StructTypes.Struct()
+StructTypes.StructType(::Type{TestPayload}) = StructTypes.Struct()
+StructTypes.StructType(::Type{StartPayload}) = StructTypes.Struct()
+
+struct LogRecord{P}
+  payload::P
+  date::DateTime
+end
+StructTypes.StructType(::Type{<:LogRecord}) = StructTypes.Struct()
+
+
+
+function read_log_file(path::AbstractString)
+  lines = readlines(path)
+  first_line = popfirst!(lines)
+  last_line = lines[end]
+  if isnothing(findfirst("FINISH", last_line))
+    @warn "Last line should be FINISH, program may have been interrupted"
+  else
+    pop!(lines)
+  end
+  if isnothing(findfirst("START_PARAMS", first_line))
+    error("First line must be START_PARAMS")
+  end
+  df = dateformat"Y-m-dTH:M:S.s"
+  first_log = JSON3.read(first_line, LogRecord{StartPayload}; dateformat=df)
+  train_logs = [
+    JSON3.read(x, LogRecord{TrainPayload}; dateformat=df) 
+    for x in lines if !isnothing(findfirst("LOSS_DURING_TRAIN", x))
+  ]
+  test_logs = [
+    JSON3.read(x, LogRecord{TestPayload}; dateformat=df)
+    for x in lines if !isnothing(findfirst("EPOCH_TEST", x))
+  ]
+  sort!(train_logs; by=Base.Fix2(getfield, :date))
+  sort!(test_logs; by=Base.Fix2(getfield, :date))
+  (; first_log, train_logs, test_logs)
+end
