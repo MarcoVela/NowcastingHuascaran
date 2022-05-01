@@ -33,3 +33,9 @@ csi_batch(y_pred_batch, y_batch, threshold) = metric_batch(csi_framewise, y_pred
 
 accuracy_batch(y_pred_batch, y_batch, threshold) = metric_batch(accuracy_framewise, y_pred_batch, y_batch, threshold)
 
+function csi(y_pred::AbstractArray{T}, y::AbstractArray{T}) where {T}
+  a = sum(y_pred .== y .== one(T))
+  b = sum((y_pred .== one(T)) .& (y .== zero(T)))
+  c = sum((y_pred .== zero(T)) .& (y .== one(T)))
+  a / (a + b + c)
+end

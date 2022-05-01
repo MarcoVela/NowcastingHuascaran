@@ -1,6 +1,3 @@
-import Pkg
-Pkg.add(["Logging", "LoggingExtras", "JSON3", "Dates"])
-
 using Logging
 using LoggingExtras
 using JSON3

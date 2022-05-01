@@ -1,7 +1,10 @@
-import Pkg
-Pkg.add("HDF5")
-
 using HDF5
+
+function get_default_evaluation_params()
+  (; N = 12, train_test_ratio=.99, batchsize=1)
+end
+
+#WxHxCxNxT
 function get_dataset(; train_test_ratio, batchsize, N)
   dataset_path = datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5")
   mnist_whole = h5read(dataset_path, "moving_mnist")

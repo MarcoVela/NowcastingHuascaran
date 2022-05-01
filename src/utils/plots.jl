@@ -1,6 +1,3 @@
-import Pkg
-Pkg.add("Plots")
-
 using Plots
 
 function plot_results(x, y_pred, y)
@@ -18,4 +15,22 @@ function plot_results(x, y_pred, y)
     plot(p1, p2, size=(800, 400))
   end
   gif(g, fps=2)
+end
+
+
+function plot_many(samples, labels=1:length(samples); kws...)
+  Ti = axes(samples[1], 3)
+  ps_list = [
+    [
+      heatmap(sample[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing, title=string(l))
+      for (sample, l) in zip(samples, labels)
+    ]
+    for i in Ti
+  ]
+  kws = Dict(kws)
+  fps = pop!(kws, :fps, 2)
+  g = @animate for ps in ps_list
+    plot(ps...; kws...)
+  end
+  gif(g; fps)
 end

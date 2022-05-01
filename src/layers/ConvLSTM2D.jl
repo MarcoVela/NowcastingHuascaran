@@ -1,6 +1,3 @@
-import Pkg
-Pkg.add("Flux")
-
 using Flux
 
 # Helpers
