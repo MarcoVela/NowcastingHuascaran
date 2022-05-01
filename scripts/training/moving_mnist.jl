@@ -58,7 +58,7 @@ const device = CUDA.functional(true) ? gpu : cpu
 
 @info "Building model"
 
-const model = build_model(; N_out=TOTAL_FRAMES-N, device=device, dropout=args.dropout)
+model = build_model(; N_out=TOTAL_FRAMES-N, device=device, dropout=args.dropout)
 
 show(stdout, "text/plain", cpu(model))
 println(stdout)
@@ -102,8 +102,8 @@ end
 const ps = params(model)
 const opt = get_opt(args.lr)
 
-@info "Time of first pullback"
-@time Flux.pullback(loss, train_x, train_y);
+@info "Time of first gradient"
+@time Flux.gradient(loss, train_x, train_y);
 
 @info "Starting training for $(args.epochs) epochs"
 
@@ -116,6 +116,8 @@ function bestcsi(x, y)
   (val=max_csi, thrs=thresholds[i])
 end
 
+metrics = [binarycrossentropy, bestcsi]
+
 for epoch in 1:args.epochs
   log_loss_cb = throttle(() -> log_loss(epoch), args.throttle)
   @info "Training..." epoch
@@ -124,7 +126,6 @@ for epoch in 1:args.epochs
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
   @info "Testing..." epoch
-  metrics = [binarycrossentropy, bestcsi]
   Flux.reset!(model)
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
