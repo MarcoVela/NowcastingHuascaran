@@ -11,13 +11,6 @@ struct TrainPayload
   epoch::Int
 end
 
-struct TestPayload
-  var_loss::Float64
-  exec_time::Float64
-  mean_loss::Float64
-  epoch::Int
-end
-
 struct StartPayload
   batchsize::Int
   opt::String
@@ -29,10 +22,10 @@ struct StartPayload
   epochs::Int
   dropout::Float64
   lr::Float64
+  architecture::String
 end
 
 StructTypes.StructType(::Type{TrainPayload}) = StructTypes.Struct()
-StructTypes.StructType(::Type{TestPayload}) = StructTypes.Struct()
 StructTypes.StructType(::Type{StartPayload}) = StructTypes.Struct()
 
 struct LogRecord{P}
@@ -62,7 +55,7 @@ function read_log_file(path::AbstractString)
     for x in lines if !isnothing(findfirst("LOSS_DURING_TRAIN", x))
   ]
   test_logs = [
-    JSON3.read(x, LogRecord{TestPayload}; dateformat=df)
+    JSON3.read(x, LogRecord{NamedTuple}; dateformat=df)
     for x in lines if !isnothing(findfirst("EPOCH_TEST", x))
   ]
   sort!(train_logs; by=Base.Fix2(getfield, :date))

@@ -83,11 +83,14 @@ const logfile = datadir("models",
                      foldername, 
                      "logs.log")
 mkpath(dirname(logfile))
+
+isfile(logfile) && Base.unlink(logfile)
+
 const logger, close_logger = get_logger(logfile)
 
 Base.with_logger(logger) do 
   nt = ntfromstruct(args)
-  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) nt...
+  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) architecture nt...
 end
 
 function log_loss(epoch)
@@ -103,20 +106,11 @@ const ps = params(model)
 const opt = get_opt(args.lr)
 
 @info "Time of first gradient"
-@time Flux.gradient(loss, train_x, train_y);
+CUDA.@time Flux.gradient(loss, train_x, train_y);
 
 @info "Starting training for $(args.epochs) epochs"
 
-function bestcsi(x, y)
-  thresholds = 0:.05:1
-  y = y .> .8
-  max_csi, i = findmax(thresholds) do t
-    csi(x .> t, y)
-  end
-  (val=max_csi, thrs=thresholds[i])
-end
-
-metrics = [binarycrossentropy, bestcsi]
+metrics = [binarycrossentropy, csi]
 
 for epoch in 1:args.epochs
   log_loss_cb = throttle(() -> log_loss(epoch), args.throttle)
