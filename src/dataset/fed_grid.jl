@@ -34,7 +34,7 @@ function gridrange(resolution::Quantity, N, S, E, W)
   (lon_range_val, lat_range_val)
 end
 
-function generate_grid_lat_lon(resolution::Quantity{T}, N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W) where {T}
+function generate_grid_lat_lon(resolution::Quantity, N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
   lon_range_val, lat_range_val = gridrange(resolution, N, S, E, W)
   Histogram((lon_range_val, lat_range_val), Float32)
 end
@@ -44,23 +44,41 @@ function groupby_floor(records::AbstractVector{FlashRecords}, p::Period)
   OrderedDict(sort(collect(zip(keys(g), values(g))), by = first))
 end
 
+function try_regularize_time(time_range)
+  ini = first(time_range)
+  stp = time_range[2] - ini
+  lst = last(time_range)
+  rng = ini:stp:lst
+  if collect(rng) == time_range
+    return rng
+  else
+    return time_range
+  end
+end
+
 # Receives a list of records, and return a climate array representing the FED
 # It's possible to specify the corners of the grid and both spatial and temporal
 # resolution
-function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period, N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
+function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
   groups = groupby_floor(records, t)
   lon_range, lat_range = gridrange(s, N, S, E, W)
   grid = Histogram((lon_range, lat_range, 1:length(groups)+1), Float32)
   for (i, group) in enumerate(values(groups))
     for r in group
-      append!(grid, (r.longitude, r.latitude, fill!(zeros(Float32, length(r.longitude)), i)))
+      append!(grid, (r.longitude, r.latitude, fill(i, length(r.latitude))))
     end
     view(grid.weights, :, :, i) ./= length(group)
   end
   lon_dim = Lon(lon_range[begin:end-1])
   lat_dim = Lat(lat_range[begin:end-1])
-  time_dim = Ti(collect(keys(groups)))
-  ClimArray(grid.weights, (lon_dim, lat_dim, time_dim); name="FED", attrib=Dict())
+  time_dim = Ti(try_regularize_time(collect(keys(groups))))
+  attrib = Dict(
+    "start_time" => string(minimum([x.time_start for x in records])),
+    "end_time" => string(maximum([x.time_start for x in records])),
+    "spatial_resolution" => string(s),
+    "temporal_resolution" => string(t),
+  )
+  ClimArray(grid.weights, (lon_dim, lat_dim, time_dim); name="FED", attrib=attrib)
 end
 
 
