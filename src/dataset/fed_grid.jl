@@ -61,17 +61,25 @@ end
 # resolution
 function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
   groups = groupby_floor(records, t)
+  groups_keys = collect(keys(groups))
+  time_edge = Dates.value.(first(groups_keys):t:(last(groups_keys)+t))
+  time_range = first(groups_keys):t:last(groups_keys)
+  missing_times = sort!(map(x -> findfirst(isequal(x), time_range), collect(setdiff(Set(time_range), Set(groups_keys)))))
   lon_range, lat_range = gridrange(s, N, S, E, W)
-  grid = Histogram((lon_range, lat_range, 1:length(groups)+1), Float32)
-  for (i, group) in enumerate(values(groups))
+  grid = Histogram((lon_range, lat_range, time_edge), Float32)
+  for (t, group) in groups
     for r in group
-      append!(grid, (r.longitude, r.latitude, fill(i, length(r.latitude))))
+      append!(grid, (r.longitude, r.latitude, fill(Dates.value(t), length(r.latitude))))
     end
-    view(grid.weights, :, :, i) ./= length(group)
+    view(grid.weights, :, :, searchsortedlast(time_edge, Dates.value(t))) ./= length(group)
   end
   lon_dim = Lon(lon_range[begin:end-1])
   lat_dim = Lat(lat_range[begin:end-1])
-  time_dim = Ti(try_regularize_time(collect(keys(groups))))
+  time_dim = Ti(time_range; metadata=ClimateBase.Metadata(
+    "missing_indexes" => missing_times,
+    "units" => "days since 0000-00-01 00:00:00",
+    "standard_name" => "time",
+    ))
   attrib = Dict(
     "start_time" => string(minimum([x.time_start for x in records])),
     "end_time" => string(maximum([x.time_start for x in records])),
@@ -92,20 +100,23 @@ function ncwrite_compressed(file::String, Xs; globalattr = Dict(), deflatelevel)
   end
 
   ds = NCDataset(file, "c"; attrib = globalattr)
-  for (i, X) in enumerate(Xs)
-    n = string(X.name)
-    if n == ""
-      n = "x$i"
-      @warn "$i-th ClimArray has no name, naming it $(n) instead."
+  try
+    for (i, X) in enumerate(Xs)
+      n = string(X.name)
+      if n == ""
+        n = "x$i"
+        @warn "$i-th ClimArray has no name, naming it $(n) instead."
+      end
+      ClimateBase.add_dims_to_ncfile!(ds, dims(X))
+      attrib = X.attrib
+      isnothing(attrib) && (attrib = Dict())
+      dnames = ClimateBase.dim_to_commonname.(dims(X))
+      data = Array(X)
+      ClimateBase.defVar(ds, n, data, (dnames...,); attrib, deflatelevel)
     end
-    ClimateBase.add_dims_to_ncfile!(ds, dims(X))
-    attrib = X.attrib
-    isnothing(attrib) && (attrib = Dict())
-    dnames = ClimateBase.dim_to_commonname.(dims(X))
-    data = Array(X)
-    ClimateBase.defVar(ds, n, data, (dnames...,); attrib, deflatelevel)
+  finally
+    close(ds)
   end
-  close(ds)
 end
 
 function ncwrite_compressed(file::String, X::ClimArray; globalattr = Dict(), deflatelevel=1)

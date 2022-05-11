@@ -84,7 +84,10 @@ props = (; file=split(basename(parsed_args[:file]), '.')[1],
 mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID"))
 
 out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(props)*".nc")
-ispath(out_path) && Base.unlink(out_path)
+if ispath(out_path)
+  @info "Removing old dataset"
+  Base.unlink(out_path)
+end
 
 @info "saving results" out_path props...
 ncwrite_compressed(out_path, fed; deflatelevel=parsed_args[:compression])
