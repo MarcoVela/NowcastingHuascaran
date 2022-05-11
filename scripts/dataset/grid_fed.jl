@@ -54,6 +54,8 @@ W = isnan(parsed_args[:west ]) ? PERU_W : parsed_args[:west]u"°"
 corners = (; N, S, E, W)
 
 using JLD2
+using SplitApplyCombine
+using Dates
 
 @info "loading lcfa file (this may take a while)"
 
@@ -71,23 +73,30 @@ spatial_resolution = parsed_args[:spatial]u"km"
 temporal_resolution = Minute(parsed_args[:temporal])
 
 @info "generating ClimateArray"
-fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
+
+monthly_records = group(x -> lpad(month(x.time_start), 2, '0'), records)
+monthly_records = Dict(keys(monthly_records) .=> values(monthly_records))
 
 lcfa_merged = nothing
 records = nothing
-GC.gc()
-props = (; file=split(basename(parsed_args[:file]), '.')[1],
-           spatial=parsed_args[:spatial], 
-           temporal=parsed_args[:temporal], 
-           compression=parsed_args[:compression])
-
 mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID"))
 
-out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(props)*".nc")
-if ispath(out_path)
-  @info "Removing old dataset"
-  Base.unlink(out_path)
+for (m, records) in monthly_records
+  fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
+  props = (;  basename = String(split(basename(parsed_args[:file]), '.')[1]),
+              month = m,
+              spatial = parsed_args[:spatial], 
+              temporal = parsed_args[:temporal], 
+              compression = parsed_args[:compression],)
+
+
+  out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(props; sort=false)*".nc")
+  if ispath(out_path)
+      @info "Removing old dataset"
+      Base.unlink(out_path)
+  end
+
+  @info "saving results" out_path props...
+  ncwrite_compressed(out_path, fed; deflatelevel=parsed_args[:compression])
 end
 
-@info "saving results" out_path props...
-ncwrite_compressed(out_path, fed; deflatelevel=parsed_args[:compression])

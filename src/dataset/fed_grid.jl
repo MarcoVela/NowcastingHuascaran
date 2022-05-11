@@ -76,7 +76,7 @@ function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, 
   lon_dim = Lon(lon_range[begin:end-1])
   lat_dim = Lat(lat_range[begin:end-1])
   time_dim = Ti(time_range; metadata=ClimateBase.Metadata(
-    "missing_indexes" => missing_times,
+    "missing_indexes" => Vector{Int}(missing_times),
     "units" => "days since 0000-00-01 00:00:00",
     "standard_name" => "time",
     ))
