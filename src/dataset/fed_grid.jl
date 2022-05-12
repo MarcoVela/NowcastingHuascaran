@@ -62,6 +62,7 @@ end
 function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
   groups = groupby_floor(records, t)
   groups_keys = collect(keys(groups))
+  t = Minute(t)
   time_edge = Dates.value.(first(groups_keys):t:(last(groups_keys)+t))
   time_range = first(groups_keys):t:last(groups_keys)
   missing_times = sort!(map(x -> findfirst(isequal(x), time_range), collect(setdiff(Set(time_range), Set(groups_keys)))))
@@ -73,9 +74,20 @@ function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, 
     end
     view(grid.weights, :, :, searchsortedlast(time_edge, Dates.value(t))) ./= length(group)
   end
-  lon_dim = Lon(lon_range[begin:end-1])
-  lat_dim = Lat(lat_range[begin:end-1])
+  lon_dim = Lon(lon_range[begin:end-1]; metadata=ClimateBase.Metadata(
+    "units"         => "degrees_east",
+    "standard_name" => "longitude",
+    "valid_range"   => Float32[-180.0, 360.0],
+    "original_range" => Float32[lon_range[1], step(lon_range), lon_range[end-1]+eps(Float32)], # For numeric rounding error
+  ))
+  lat_dim = Lat(lat_range[begin:end-1]; metadata=ClimateBase.Metadata(
+    "units"         => "degrees_north",
+    "standard_name" => "latitude",
+    "valid_range"   => Float32[-90.0, 90.0],
+    "original_range" => Float32[lat_range[1], step(lat_range), lat_range[end-1]+eps(Float32)], # For numeric rounding error
+  ))
   time_dim = Ti(time_range; metadata=ClimateBase.Metadata(
+    "original_step_minutes" => t.value,
     "missing_indexes" => Vector{Int}(missing_times),
     "units" => "days since 0000-00-01 00:00:00",
     "standard_name" => "time",
@@ -121,4 +133,18 @@ end
 
 function ncwrite_compressed(file::String, X::ClimArray; globalattr = Dict(), deflatelevel=1)
   ncwrite_compressed(file, (X,); globalattr, deflatelevel)
+end
+
+
+function read_fed(file)
+  fed = ncread(file, "FED")
+  lon_dim, lat_dim, time_dim = dims(fed)
+  min_step = Minute(pop!(time_dim.metadata, "original_step_minutes")::Int32)
+  time_range = minimum(time_dim.val):min_step:maximum(time_dim.val)
+  time_dim2 = Ti(time_range; metadata=time_dim.metadata)
+  original_lon_range = pop!(lon_dim.metadata, "original_range")
+  lon_dim2 = Lon(original_lon_range[1]:original_lon_range[2]:original_lon_range[3]; metadata=lon_dim.metadata)
+  original_lat_range = pop!(lat_dim.metadata, "original_range")
+  lat_dim2 = Lon(original_lat_range[1]:original_lat_range[2]:original_lat_range[3]; metadata=lat_dim.metadata)
+  ClimArray(fed, (lon_dim2, lat_dim2, time_dim2))
 end
