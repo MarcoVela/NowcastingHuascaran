@@ -57,31 +57,36 @@ using JLD2
 using SplitApplyCombine
 using Dates
 
-@info "loading lcfa file (this may take a while)"
-
-lcfa_merged = @time load(parsed_args[:file])
-
-records = collect(Iterators.flatten(values(lcfa_merged)))
-
-number_of_entries = length(keys(lcfa_merged))
-number_of_records = length(records)
-extrema_number_of_records_per_entry = extrema(length, values(lcfa_merged))
-
-@info "stats of file" number_of_entries number_of_records extrema_number_of_records_per_entry
-
 spatial_resolution = parsed_args[:spatial]u"km"
 temporal_resolution = Minute(parsed_args[:temporal])
 
-@info "generating ClimateArray"
-
-monthly_records = group(x -> lpad(month(x.time_start), 2, '0'), records)
-monthly_records = Dict(keys(monthly_records) .=> values(monthly_records))
-
+@info "loading lcfa file (this may take a while)"
+lcfa_merged = @time load(parsed_args[:file])
+lcfa_merged = Dict{String, Vector{FlashRecords}}(lcfa_merged)
+monthly_records = group(x -> lpad(month(first(x).time_start), 2, '0'), values(lcfa_merged))
+monthly_records = Dict(keys(monthly_records) .=> collect.(Iterators.flatten.(values(monthly_records))))
 lcfa_merged = nothing
-records = nothing
+GC.gc()
+
+
 mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID"))
 
+@info "generating ClimateArray"
 for (m, records) in monthly_records
+
+# records = collect(Iterators.flatten(values(lcfa_merged)))
+
+number_of_records = length(records)
+
+@info "stats of file $m" number_of_records
+
+
+
+#monthly_records = group(x -> lpad(month(x.time_start), 2, '0'), records)
+#monthly_records = Dict(keys(monthly_records) .=> values(monthly_records))
+
+
+
   fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
   props = (;  basename = String(split(basename(parsed_args[:file]), '.')[1]),
               month = m,
