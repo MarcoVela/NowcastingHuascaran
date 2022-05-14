@@ -77,7 +77,7 @@ original_args = deepcopy(args)
 architecture_type = pop!(args[:architecture], :type)
 dataset_type = pop!(args[:dataset], :type)
 
-optimiser_type = pop!(args[:optimiser], :type)
+optimiser_type = Symbol(pop!(args[:optimiser], :type))
 loss_name = args[:loss]
 batchsize = args[:dataset][:batchsize]
 lr = args[:optimiser][:lr]
@@ -90,7 +90,7 @@ const experiment_id = savename((; batchsize, loss=loss_name, lr, opt=optimiser_t
 
 include(srcdir("dataset", "$dataset_type.jl"))
 include(srcdir("architecture", "$architecture_type.jl"))
-include(srcdir("optimisers", "$optimiser_type.jl"))
+include(srcdir("optimisers", "optimiser.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))
 include(srcdir("evaluation", "loss.jl"))
@@ -114,6 +114,8 @@ println(stdout)
 
 @info "Obtaining dataset"
 const train_data, test_data = @time get_dataset(; args[:dataset]...)
+
+const opt = get_opt(optimiser_type)(; args[:optimiser]...)
 
 function loss(X, y)
   Flux.reset!(model)
@@ -140,8 +142,11 @@ function log_loss(epoch)
   end
 end
 
+function test_loss()
+  loss(test_sample_x, test_sample_y)
+end
+
 const ps = params(model)
-const opt = get_opt(; args[:optimiser]...)
 
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
@@ -156,10 +161,10 @@ const metrics = get_metric.(args[:metrics])
 
 stop_callbacks = []
 if args[:early_stop] > 0
-  push!(stop_callbacks, Flux.early_stopping(loss, args[:early_stop]; init_score=Inf))
+  push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
 end
 if args[:plateau] > 0
-  push!(stop_callbacks, Flux.plateau(loss, args[:early_stop]; init_score=Inf))
+  push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf))
 end
 
 for epoch in 1:args[:epochs]
