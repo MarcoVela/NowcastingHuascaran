@@ -127,9 +127,6 @@ ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
 mkpath(dirname(logfile))
 isfile(logfile) && Base.unlink(logfile)
 const logger, close_logger = get_logger(logfile)
-Base.with_logger(logger) do 
-  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
-end
 
 const train_sample_x, train_sample_y = first(train_data)
 const test_sample_x, test_sample_y = first(test_data)
@@ -148,6 +145,10 @@ const opt = get_opt(; args[:optimiser]...)
 
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
+
+Base.with_logger(logger) do 
+  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
+end
 
 @info "Starting training for $(args[:epochs]) epochs"
 
