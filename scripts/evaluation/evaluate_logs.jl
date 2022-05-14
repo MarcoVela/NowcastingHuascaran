@@ -14,6 +14,7 @@ if !reduce(&, is_file_ARGS)
   exit(1)
 end
 filenames = possible_filenames
+using ImageClipboard
 
 include(srcdir("utils", "parse_logs.jl"))
 include(srcdir("evaluation", "plot_logs.jl"))
@@ -29,4 +30,10 @@ for (i, log_struct) in enumerate(logs_structs[2:end])
   plot_logs!(log_struct, metrics, prefix="$(i+1)")
 end
 
+temp_path, io = mktemp()
+
+show(io, MIME("image/png"), p)
+close(io)
 display(p)
+
+clipboard_img(load(temp_path))
