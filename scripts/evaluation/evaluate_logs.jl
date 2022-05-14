@@ -34,6 +34,5 @@ temp_path, io = mktemp()
 
 show(io, MIME("image/png"), p)
 close(io)
-display(p)
 
 clipboard_img(load(temp_path))
