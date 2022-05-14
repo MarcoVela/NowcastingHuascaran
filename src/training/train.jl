@@ -29,7 +29,7 @@ function train_single_epoch!(ps, loss, data, opt; cb=() -> ())
 end
 
 function loss_single_epoch(loss, data)
-  losses = zeros((0,))
+  losses = Float64[]
   itrsz = Base.IteratorSize(typeof(data))
   n = (itrsz == Base.HasLength()) || (itrsz == Base.HasShape{1}()) ? length(data) : 0
   sizehint!(losses, n)
@@ -49,9 +49,9 @@ function metrics_single_epoch(model, metrics, data)
   n = (itrsz == Base.HasLength()) || (itrsz == Base.HasShape{1}()) ? length(data) : 0
   p = Progress(n; showspeed=true, enabled=!iszero(n))
   for (X, y) in data
+    Flux.reset!(model)
     y_pred = cpu(model(X))
     for metric in metrics
-      Flux.reset!(model)
       m = metric(y_pred, y)
       if m isa NamedTuple
         for (k, v) in pairs(m)

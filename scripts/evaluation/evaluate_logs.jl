@@ -1,13 +1,10 @@
 using DrWatson
 @quickactivate
 
-if ispath(ARGS[1])
-  metrics = Symbol[]
-  possible_filenames = ARGS
-else
-  metrics = Symbol.(split(ARGS[1], ','))
-  possible_filenames = ARGS[2:end]
-end
+metrics = Symbol.(split(ARGS[1], ','))
+possible_filenames = ARGS[2:end]
+
+iszero(length(possible_filenames)) && error("Must provide files")
 
 is_file_ARGS = isfile.(possible_filenames)
 
@@ -24,7 +21,9 @@ include(srcdir("evaluation", "plot_logs.jl"))
 
 logs_structs = read_log_file.(filenames)
 
-p = plot_logs(logs_structs[begin], metrics; prefix="1")
+pref = length(logs_structs) == 1 ? "" : "1"
+
+p = plot_logs(logs_structs[begin], metrics; prefix=pref)
 
 for (i, log_struct) in enumerate(logs_structs[2:end])
   plot_logs!(log_struct, metrics, prefix="$(i+1)")

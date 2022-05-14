@@ -1,6 +1,6 @@
 include(srcdir("layers", "ConvLSTM2D.jl"))
 
-function build_model(; N_out, device, dropout)
+function build_model(; out, device, dropout)
   model = Chain(
     TimeDistributed(
       Chain(
@@ -17,7 +17,7 @@ function build_model(; N_out, device, dropout)
     ),
     Dropout(dropout),
     RepeatInput(
-      N_out,
+      out,
       ConvLSTM2D((16, 16), (3, 3), 128 => 128, pad=SamePad()),
     ),
     TimeDistributed(

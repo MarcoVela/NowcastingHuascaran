@@ -4,7 +4,7 @@ using Dates
 
 function load_experiment(filename)
   architecture = BSON.parse(filename)[:architecture]
-  include(srcdir("models", "$architecture.jl"))
+  include(srcdir("architecture", "$architecture.jl"))
   params = BSON.load(filename)
   model = pop!(params, :model)
   model, params

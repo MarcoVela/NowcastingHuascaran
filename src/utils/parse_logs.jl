@@ -49,7 +49,7 @@ function read_log_file(path::AbstractString)
     error("First line must be START_PARAMS")
   end
   df = dateformat"Y-m-dTH:M:S.s"
-  first_log = JSON3.read(first_line, LogRecord{StartPayload}; dateformat=df)
+  first_log = JSON3.read(first_line, LogRecord{NamedTuple}; dateformat=df)
   train_logs = [
     JSON3.read(x, LogRecord{TrainPayload}; dateformat=df) 
     for x in lines if !isnothing(findfirst("LOSS_DURING_TRAIN", x))

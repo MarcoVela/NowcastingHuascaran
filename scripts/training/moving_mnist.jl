@@ -16,7 +16,7 @@ const dataset = "moving_mnist"
 @info "Including source" architecture dataset optimiser
 
 include(srcdir("dataset", "$dataset.jl"))
-include(srcdir("models", "$architecture.jl"))
+include(srcdir("architecture", "$architecture.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))
 include(srcdir("evaluation", "metrics.jl"))

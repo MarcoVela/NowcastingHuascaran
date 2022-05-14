@@ -74,18 +74,9 @@ mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID"))
 @info "generating ClimateArray"
 for (m, records) in monthly_records
 
-# records = collect(Iterators.flatten(values(lcfa_merged)))
+  number_of_records = length(records)
 
-number_of_records = length(records)
-
-@info "stats of file $m" number_of_records
-
-
-
-#monthly_records = group(x -> lpad(month(x.time_start), 2, '0'), records)
-#monthly_records = Dict(keys(monthly_records) .=> values(monthly_records))
-
-
+  @info "stats of file $m" number_of_records
 
   fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
   props = (;  basename = String(split(basename(parsed_args[:file]), '.')[1]),
