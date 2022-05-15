@@ -17,7 +17,7 @@ function plot_logs!(log_records, metrics; prefix)
   test_metrics = Dict([
     (metric, [getfield(x.payload, metric) for x in test_logs])
     for metric in metrics
-    if hasfield(payloadtype(eltype(test_logs)), metric)
+    if !iszero(length(test_logs)) && hasfield(typeof(test_logs[1].payload), metric)
   ])
   prefix = ismissing(prefix) ? first_log.payload[:architecture][:type] : string(prefix)
   prefix = isempty(prefix) ? "" : "$(prefix)_"
