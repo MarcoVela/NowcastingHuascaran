@@ -160,6 +160,10 @@ end
 const metrics = get_metric.(args[:metrics])
 
 stop_callbacks = []
+stop_functions = [
+  Flux.early_stopping,
+  Flux.plateau,
+]
 if args[:early_stop] > 0
   push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
 end
@@ -196,7 +200,7 @@ for epoch in 1:args[:epochs]
 
   stop_callbacks_result = [callback() for callback in stop_callbacks]
   if any(stop_callbacks_result)
-    stop_cause = stop_callbacks[stop_callbacks_result]
+    stop_cause = stop_functions[stop_callbacks_result]
     @info "STOP_TRAIN" epoch stop_cause
     break
   end
