@@ -15,11 +15,19 @@ s = ArgParseSettings()
     range_tester = isfile
     action = :append_arg
   "--x_left"
-    help = "Start plot at position x"
+    help = "Left boundary for the x axis"
+    arg_type = Float64
+    default = NaN
+  "--x_right"
+    help = "Right boundary for the x axis"
     arg_type = Float64
     default = NaN
   "--y_top"
-    help = "Top limit for y axis"
+    help = "Top boundary for the y axis"
+    arg_type = Float64
+    default = NaN
+  "--y_bot"
+    help = "Bottom boundary for the y axis"
     arg_type = Float64
     default = NaN
   "--clipboard"
@@ -55,7 +63,9 @@ x_left, x_right = xlims(p)
 y_bot, y_top = ylims(p)
 
 !isnan(args[:y_top]) && (y_top = args[:y_top])
+!isnan(args[:y_bot]) && (y_bot = args[:y_bot])
 !isnan(args[:x_left]) && (x_left = args[:x_left])
+!isnan(args[:x_right]) && (x_right = args[:x_right])
 
 xlims!((x_left, x_right))
 ylims!((y_bot, y_top))
