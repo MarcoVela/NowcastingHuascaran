@@ -168,7 +168,7 @@ if args[:early_stop] > 0
   push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
 end
 if args[:plateau] > 0
-  push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf))
+  push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf, min_dist=2f-5))
 end
 
 for epoch in 1:args[:epochs]
