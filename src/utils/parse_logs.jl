@@ -32,6 +32,9 @@ struct LogRecord{P}
   payload::P
   date::DateTime
 end
+
+payloadtype(::Type{LogRecord{P}}) where {P} = P;
+
 StructTypes.StructType(::Type{<:LogRecord}) = StructTypes.Struct()
 
 

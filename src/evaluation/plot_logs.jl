@@ -12,12 +12,12 @@ function plot_logs!(log_records, metrics; prefix)
   train_metrics = Dict([
     (metric, [getfield(x.payload, metric) for x in train_logs])
     for metric in metrics
-    if hasfield(typeof(train_logs[1].payload), metric)
+    if hasfield(payloadtype(eltype(train_logs)), metric)
   ])
   test_metrics = Dict([
     (metric, [getfield(x.payload, metric) for x in test_logs])
     for metric in metrics
-    if hasfield(typeof(test_logs[1].payload), metric)
+    if hasfield(payloadtype(eltype(test_logs)), metric)
   ])
   prefix = ismissing(prefix) ? first_log.payload[:architecture][:type] : string(prefix)
   prefix = isempty(prefix) ? "" : "$(prefix)_"
@@ -37,7 +37,9 @@ function plot_logs!(log_records, metrics; prefix)
   y_min = y_min * (1 + -sign(y_min)*.25)
   y_max = y_max * (1 +  sign(y_max)*.25)
   ylims!((y_min, y_max))
-  vline!(test_x; linestyle=:dash, label="$(prefix)epochs")
+  if !iszero(length(test_x))
+    vline!(test_x; linestyle=:dash, label="$(prefix)epochs")
+  end
 end
 
 function plot_logs(log_records, metrics = Symbol[]; prefix = "")
