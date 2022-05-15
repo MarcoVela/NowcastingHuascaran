@@ -14,6 +14,7 @@ function build_model(; kwargs...)
       Conv((3,3), 128=>256, lrelu, pad=SamePad()),
       Conv((3,3), 256=>256, lrelu, pad=SamePad(), stride=2),
     ),
+    Flux.BatchNorm(256),
     Chain(
       ConvTranspose((7,7), 256=>256, lrelu, pad=SamePad()),
       ConvTranspose((7,7), 256=>128, lrelu, pad=SamePad(), stride=2),
