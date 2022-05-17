@@ -89,7 +89,7 @@ lr = args[:optimiser][:lr]
 
 
 const model_id = savename((; architecture=architecture_type, dataset=dataset_type))
-const experiment_id = savename((; batchsize, loss=loss_name, lr, opt=optimiser_type))
+const experiment_id = savename((; batchsize, loss=loss_name, lr, opt=optimiser_type, gitstatus=gitdescribe()), sort=false)
 
 @info "Including source" architecture_type dataset_type optimiser_type
 
@@ -191,6 +191,7 @@ for epoch in 1:args[:epochs]
   @info "Testing..." epoch
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
+  metrics_dict[:loss] = metrics_dict[loss_name]
   push!(epoch_losses, metrics_dict[loss_name])
   Base.with_logger(logger) do
     @info "EPOCH_TEST" epoch exec_time=test_time metrics_dict...
