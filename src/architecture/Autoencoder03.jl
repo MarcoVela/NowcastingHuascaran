@@ -6,15 +6,17 @@ function build_model(; device, kwargs...)
       Conv((3,3),  1=>64, lrelu, pad=SamePad()),
       Conv((3,3), 64=>64, lrelu, pad=SamePad()),
       Conv((3,3), 64=>64, lrelu, pad=SamePad(), stride=2),
+      Flux.BatchNorm(64, track_stats=true),
     
       Conv((3,3),  64=>128, lrelu, pad=SamePad()),
       Conv((3,3), 128=>128, lrelu, pad=SamePad()),
       Conv((3,3), 128=>128, lrelu, pad=SamePad(), stride=2),
+      Flux.BatchNorm(128, track_stats=true),
   
       Conv((3,3), 128=>256, lrelu, pad=SamePad()),
       Conv((3,3), 256=>256, lrelu, pad=SamePad(), stride=2),
+      Flux.BatchNorm(256, track_stats=true),
     ),
-    Flux.BatchNorm(256),
     Chain(
       ConvTranspose((7,7), 256=>256, lrelu, pad=SamePad()),
       ConvTranspose((7,7), 256=>128, lrelu, pad=SamePad(), stride=2),

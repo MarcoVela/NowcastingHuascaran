@@ -32,6 +32,10 @@ end
       arg_type = Dict
       required = true
       range_tester = Base.Fix2(haskey, :type)
+  "--base_model"
+      help = "Path of base artifact that will be passed"
+      range_tester = isfile
+      required = false
   "--dataset", "-d"
       help = "Dataset settings"
       arg_type = Dict
@@ -79,6 +83,7 @@ dataset_type = pop!(args[:dataset], :type)
 
 optimiser_type = Symbol(pop!(args[:optimiser], :type))
 loss_name = args[:loss]
+@assert (loss_name ∈ args[:metrics]) "Loss function should be monitored as a metric"
 batchsize = args[:dataset][:batchsize]
 lr = args[:optimiser][:lr]
 
@@ -108,7 +113,12 @@ CUDA.functional(args[:device] == :gpu)
 const device = args[:device] == :gpu ? gpu : cpu
 
 @info "Building model"
-const model = device(build_model(; args[:architecture]...))
+if !isnothing(args[:base_model])
+  using BSON
+  args[:architecture][:base_model] = BSON.load(args[:base_model])[:model]
+end
+
+const model, ps = build_model(; device, args[:architecture]...)
 show(stdout, "text/plain", cpu(model))
 println(stdout)
 
@@ -142,11 +152,11 @@ function log_loss(epoch)
   end
 end
 
-function test_loss()
-  loss(test_sample_x, test_sample_y)
-end
+const epoch_losses = Float64[]
 
-const ps = params(model)
+function test_loss()
+  epoch_losses[end]
+end
 
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
@@ -181,10 +191,11 @@ for epoch in 1:args[:epochs]
   @info "Testing..." epoch
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
+  push!(epoch_losses, metrics_dict[loss_name])
   Base.with_logger(logger) do
     @info "EPOCH_TEST" epoch exec_time=test_time metrics_dict...
   end
-  args_dict = merge(deepcopy(args), metrics_dict)
+  args_dict = merge(deepcopy(original_args), metrics_dict)
   args_dict[:model] = cpu(model)
   args_dict[:epoch] = epoch
   args_dict[:date] = Dates.now()

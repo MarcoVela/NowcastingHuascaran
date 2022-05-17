@@ -1,7 +1,7 @@
 include(srcdir("layers", "ConvLSTM2D.jl"))
 
-function build_model(; out, dropout)
-  model = Chain(
+function build_model(; out, dropout, device)
+  _model = Chain(
     TimeDistributed(
       Chain(
         Conv((3,3),  1=>64, Base.Fix2(leakyrelu, 0.2f0), pad=SamePad()),
@@ -37,4 +37,7 @@ function build_model(; out, dropout)
       )
     ),
   )
+  model = device(_model)
+  ps = params(model)
+  model, ps
 end
