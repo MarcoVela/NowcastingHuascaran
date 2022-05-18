@@ -1,3 +1,4 @@
+using Flux
 include(srcdir("layers", "ConvLSTM2D.jl"))
 using BSON
 
@@ -10,6 +11,7 @@ end
 
 function build_model(; out, device, base_model, ch="same")
   @assert (length(base_model) == 2) "Base model should only have 2 elements"
+  testmode!(base_model)
   encoder, decoder = base_model
   _ch = determine_channels(encoder[end]) # Asumiendo una capa conv o BatchNorm
   hidden_channels = ch == "same" ? _ch : ch
