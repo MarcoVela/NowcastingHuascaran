@@ -191,6 +191,7 @@ for epoch in 1:args[:epochs]
   @info "Testing..." epoch
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
+  original_metrics = deepcopy(metrics_dict)
   metrics_dict[:test_loss] = metrics_dict[loss_name]
   push!(epoch_losses, metrics_dict[loss_name])
   Base.with_logger(logger) do
@@ -205,7 +206,7 @@ for epoch in 1:args[:epochs]
   args_dict[:optimiser][:type] = optimiser_type
   @tag!(args_dict, storepatch=true)
 
-  iteration_id = savename((; epoch, metrics_dict...), "bson"; digits=5, sort=false)
+  iteration_id = savename((; epoch, original_metrics...), "bson"; digits=5, sort=false)
 
   filename = datadir("models", model_id, experiment_id, iteration_id)
   safesave(filename, args_dict)
