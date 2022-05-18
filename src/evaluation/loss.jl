@@ -8,6 +8,10 @@ module MyLosses
     (intersection .+ _one) ./ (union .+ _one)
   end
 
+  function negcsi(args...; kwargs...) 
+    c = csi(args...; kwargs...)
+    one(eltype(c)) - c
+  end
 end
 
 function get_metric(s::Symbol)
