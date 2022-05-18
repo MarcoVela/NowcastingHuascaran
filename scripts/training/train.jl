@@ -76,6 +76,12 @@ end
 end
 
 args = parse_args(s; as_symbols=true)
+loss_name = args[:loss]
+if loss_name ∉ args[:metrics]
+  @warn "Loss function should be monitored as a metric, including"
+  push!(args[:metrics], loss_name)
+end
+
 original_args = deepcopy(args)
 
 architecture_type = pop!(args[:architecture], :type)
@@ -83,7 +89,6 @@ dataset_type = pop!(args[:dataset], :type)
 
 optimiser_type = Symbol(pop!(args[:optimiser], :type))
 loss_name = args[:loss]
-@assert (loss_name ∈ args[:metrics]) "Loss function should be monitored as a metric"
 batchsize = args[:dataset][:batchsize]
 lr = args[:optimiser][:lr]
 
