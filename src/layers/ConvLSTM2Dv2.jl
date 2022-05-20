@@ -1,4 +1,6 @@
 using Flux
+using Flux: gate
+
 
 include("utils.jl")
 
@@ -9,7 +11,8 @@ struct ConvLSTM2Dv2Cell{W1, W2, S}
 end
 
 function Flux.gate(x::AbstractArray{T, N}, h, n) where {T, N}
-  selectdim(x, N-1, Flux.gate(h,n))
+  before_dims = ntuple(_ -> :, N-2)
+  view(x, before_dims..., gate(h,n), :)
 end
 
 function ConvLSTM2Dv2Cell(
@@ -46,7 +49,8 @@ function (m::ConvLSTM2Dv2Cell)((h, c), x::AbstractArray{T, 4}) where {T}
   (h′, c′), h′
 end
 
-Flux.@functor ConvLSTM2Dv2Cell (Wi, Wh)
+Flux.@functor ConvLSTM2Dv2Cell
+Flux.trainable(c::ConvLSTM2Dv2Cell) = (Wi=c.Wi, Wh=c.Wh)
 
 
 function (m::Flux.Recur{<:ConvLSTM2Dv2Cell})(x::AbstractArray{T, 5}) where {T}

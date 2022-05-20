@@ -7,7 +7,7 @@ end
 
 function (r::RepeatInput)(x::AbstractArray{T, N}) where {T, N}
   h = [r.m(x) for _ in 1:r.n]
-  reshape(reduce(ncat, h), size(h[1])..., :)
+  reduce(ncat, h)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", x::RepeatInput)

@@ -140,22 +140,12 @@ function loss(X, y)
 end
 
 const logfile = datadir("models", model_id, experiment_id, "logs.log")
-ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
-mkpath(dirname(logfile))
-isfile(logfile) && Base.unlink(logfile)
-const logger, close_logger = get_logger(logfile)
+
 
 const train_sample_x, train_sample_y = first(train_data)
 const test_sample_x, test_sample_y = first(test_data)
 
-function log_loss(epoch)
-  val_test, exec_time_test = CUDA.@timed loss(test_sample_x, test_sample_y)
-  val_train, exec_time_train = CUDA.@timed loss(train_sample_x, train_sample_y)
-  exec_time = mean((exec_time_test, exec_time_train))
-  Base.with_logger(logger) do 
-    @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
-  end
-end
+
 
 const epoch_losses = Float64[]
 
@@ -165,6 +155,20 @@ end
 
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
+
+ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
+mkpath(dirname(logfile))
+isfile(logfile) && Base.unlink(logfile)
+const logger, close_logger = get_logger(logfile)
+
+function log_loss(epoch)
+  val_test, exec_time_test = CUDA.@timed loss(test_sample_x, test_sample_y)
+  val_train, exec_time_train = CUDA.@timed loss(train_sample_x, train_sample_y)
+  exec_time = mean((exec_time_test, exec_time_train))
+  Base.with_logger(logger) do 
+    @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
+  end
+end
 
 Base.with_logger(logger) do 
   @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
