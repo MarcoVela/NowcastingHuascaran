@@ -1,8 +1,8 @@
 using HDF5
+using DrWatson
 
-function get_dataset(; splitratio, batchsize)
-  dataset_path = datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5")
-  mnist_whole = h5read(dataset_path, "moving_mnist")
+function get_dataset(; splitratio, batchsize, path=datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5"))
+  mnist_whole = h5read(path, "moving_mnist")
   W,H,C = size(mnist_whole)
   mnist = reshape(mnist_whole, W, H, C, :)
   N = size(mnist, 4)

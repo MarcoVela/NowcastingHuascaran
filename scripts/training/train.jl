@@ -41,6 +41,9 @@ end
       arg_type = Dict
       required = true
       range_tester = x -> (haskey(x, :type) && haskey(x, :batchsize) && haskey(x, :splitratio))
+  "--dataset_path"
+      help = "Dataset path"
+      required = false
   "--epochs"
       help = "Number of epochs"
       arg_type = Int
@@ -86,6 +89,10 @@ original_args = deepcopy(args)
 
 architecture_type = pop!(args[:architecture], :type)
 dataset_type = pop!(args[:dataset], :type)
+dataset_path = pop!(args, :dataset_path)
+if !isnothing(dataset_path)
+  args[:dataset][:path] = dataset_path
+end
 
 optimiser_type = Symbol(pop!(args[:optimiser], :type))
 loss_name = args[:loss]

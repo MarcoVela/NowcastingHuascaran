@@ -1,9 +1,9 @@
 using HDF5
+using DrWatson
 
 #WxHxCxNxT
-function get_dataset(; splitratio, batchsize, N)
-  dataset_path = datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5")
-  mnist_whole = h5read(dataset_path, "moving_mnist")
+function get_dataset(; splitratio, batchsize, N, path=datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5"))
+  mnist_whole = h5read(path, "moving_mnist")
   TOTAL_SAMPLES = size(mnist_whole, 4)
   TOTAL_FRAMES = size(mnist_whole, 5)
   last_train_sample_index = Int(TOTAL_SAMPLES * splitratio)
