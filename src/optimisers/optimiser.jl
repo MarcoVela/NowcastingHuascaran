@@ -8,7 +8,7 @@ module MyOptimisers
 
   ADAM(; lr) = Flux.Optimise.ADAM(lr)
 
-  RMSProp(; lr, rho) = Flux.Optimise.RMSProp(lr, rho)
+  RMSProp(; lr, rho=0.9) = Flux.Optimise.RMSProp(lr, rho)
 end
 
 
