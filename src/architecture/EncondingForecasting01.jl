@@ -4,6 +4,7 @@ using DrWatson
 
 include(srcdir("layers", "TimeDistributed.jl"))
 include(srcdir("layers", "KeepLast.jl"))
+include(srcdir("layers", "RepeatInput.jl"))
 include(srcdir("layers", "ConvLSTM2Dv2.jl"))
 
 function build_model(; out, device)
