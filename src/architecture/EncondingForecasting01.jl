@@ -16,7 +16,7 @@ function build_model(; out, device)
       ConvLSTM2Dv2((64, 64), (5, 5), (5, 5), 256=>256, pad=SamePad()),
     ),
     TimeDistributed(
-      Conv((1,1), 256=>1, pad=SamePad(), bias=false)
+      Conv((1,1), 256=>1, pad=SamePad(), sigmoid_fast,bias=false)
     )
   )
   model = device(_model)
