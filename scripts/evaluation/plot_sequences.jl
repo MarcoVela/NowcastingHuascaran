@@ -46,12 +46,11 @@ end
 
 experiments = [experiments_from_files..., experiments_from_folders...]
 datasets = [params[:dataset] for (_, params) in experiments]
-unique_datasets = unique(datasets)
+unique_datasets = unique(x -> x[:type], datasets)
 
 if !isone(length(unique_datasets))
   model_datasets = Dict(experiments .=> datasets)
   @error "All models should use the same dataset" model_datasets
-  exit(1)
 end
 
 dataset = first(datasets)
