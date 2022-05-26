@@ -45,6 +45,7 @@ function read_log_file(path::AbstractString)
   last_line = lines[end]
   if isnothing(findfirst("FINISH", last_line))
     @warn "Last line should be FINISH, program may have been interrupted"
+    last_line = nothing
   else
     pop!(lines)
   end
@@ -63,5 +64,5 @@ function read_log_file(path::AbstractString)
   ]
   sort!(train_logs; by=Base.Fix2(getfield, :date))
   sort!(test_logs; by=Base.Fix2(getfield, :date))
-  (; first_log, train_logs, test_logs)
+  (; first_log, train_logs, test_logs, last_log = last_line)
 end

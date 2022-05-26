@@ -12,7 +12,7 @@ function (k::KeepLast)(x::AbstractArray{T, N}) where {T, N}
   before_dims = ntuple(_ -> :, N-1)
   n2 = size(x, N)
   discarted = ifelse(n2 - k.n < 0, 0, n2 - k.n)
-  k.m(view(x, before_dims..., 1:discarted))
+  discarted > 0 && k.m(view(x, before_dims..., 1:discarted))
   k.m(view(x, before_dims..., discarted+1:n2))
 end
 
