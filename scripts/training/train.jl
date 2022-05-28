@@ -160,6 +160,8 @@ function test_loss()
   epoch_losses[end]
 end
 
+const metrics = get_metric.(args[:metrics])
+
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
 
@@ -183,17 +185,15 @@ end
 
 @info "Starting training for $(args[:epochs]) epochs"
 
-const metrics = get_metric.(args[:metrics])
-
 stop_callbacks = []
 stop_functions = [
   Flux.early_stopping,
   Flux.plateau,
 ]
-if args[:early_stop] > 0
+if get!(args, :early_stop, 0) > 0
   push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
 end
-if args[:plateau] > 0
+if get!(args, :plateau, 0) > 0
   push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf, min_dist=2f-5))
 end
 

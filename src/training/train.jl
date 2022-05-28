@@ -54,7 +54,7 @@ function metrics_single_epoch(model, metrics, data)
     y_pred = cpu(model(X))
     for metric in metrics
       m = metric(y_pred, y)
-      if m isa NamedTuple
+      if (m isa NamedTuple) || (m isa Dict)
         for (k, v) in pairs(m)
           key = Symbol(metric, k)
           push!(get!(metrics_dict, key, Float64[]), v)
