@@ -5,7 +5,7 @@ using DrWatson
 include(srcdir("layers", "TimeDistributed.jl"))
 include(srcdir("layers", "KeepLast.jl"))
 include(srcdir("layers", "RepeatInput.jl"))
-include(srcdir("layers", "ConvLSTM2Dv2.jl"))
+include(srcdir("layers", "ConvLSTM2Dv3.jl"))
 
 function build_model(; out, device)
   _model = Chain(
@@ -15,13 +15,13 @@ function build_model(; out, device)
         Conv((5, 5), 32=>128, leakyrelu, pad=SamePad(), stride=2),
       ),
     ),
-    ConvLSTM2Dv2((16, 16), (5, 5), (5, 5),  128=>128, pad=SamePad()),
+    ConvLSTM2Dv3((16, 16), (5, 5), (5, 5),  128=>128, pad=SamePad()),
     KeepLast(
-      ConvLSTM2Dv2((16, 16), (5, 5), (5, 5), 128=>128, pad=SamePad()),
+      ConvLSTM2Dv3((16, 16), (5, 5), (5, 5), 128=>128, pad=SamePad()),
     ),
     RepeatInput(
       out,
-      ConvLSTM2Dv2((16, 16), (5, 5), (5, 5), 128=>64, pad=SamePad()),
+      ConvLSTM2Dv3((16, 16), (5, 5), (5, 5), 128=>64, pad=SamePad()),
     ),
     TimeDistributed(
       Chain(
