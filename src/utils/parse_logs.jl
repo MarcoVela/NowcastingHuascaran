@@ -49,8 +49,8 @@ function read_log_file(path::AbstractString)
   else
     pop!(lines)
   end
-  if isnothing(findfirst("START_PARAMS", first_line))
-    error("First line must be START_PARAMS")
+  if isnothing(findfirst("START_PARAMS", first_line)) && isnothing(findfirst("CONTINUE_TRAIN", first_line))
+    error("First line must be START_PARAMS or CONTINUE_TRAIN")
   end
   df = dateformat"Y-m-dTH:M:S.s"
   first_log = JSON3.read(first_line, LogRecord{NamedTuple}; dateformat=df)
