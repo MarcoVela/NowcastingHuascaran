@@ -66,6 +66,7 @@ end
 
 Flux.Recur(m::ConvLSTM2Dv3Cell) = Flux.Recur(m, m.state0)
 ConvLSTM2Dv3(a...; kw...) = Flux.Recur(ConvLSTM2Dv3Cell(a...; kw...))
+Flux._show_leaflike(::ConvLSTM2Dv3Cell) = true
 
 function _print_convlstm2d_options(io::IO, l)
   all(==(0), l.Wi.pad) || print(io, ", pad=", Flux._maybetuple_string(l.Wi.pad))

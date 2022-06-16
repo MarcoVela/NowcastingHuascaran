@@ -53,8 +53,10 @@ if !isone(length(unique_datasets))
   @error "All models should use the same dataset" model_datasets
 end
 
+dataset_path = first([params[:dataset_path] for (_, params) in experiments])
 dataset = first(datasets)
 dataset_type = pop!(dataset, :type)
+dataset[:path] = dataset_path
 
 include(srcdir("dataset", "$dataset_type.jl"))
 
@@ -76,7 +78,9 @@ include(srcdir("utils", "plots.jl"))
 models = [m for (m, _) in experiments]
 preds = [cat(rtx, reshape(model(tx), W, H, :); dims=3) for model in models]
 
+Ti_truth = size(reshape(first(models)(tx), W, H, :), 3)
+
 labels = [["model_$i" for i in 1:length(models)]..., "Truth"]
 samples = [preds..., cat(rtx, ty; dims=3)]
 
-plot_many(samples, labels; layout=(1, length(labels)), size=(900, 400))
+plot_many(samples, labels, Ti_truth; layout=(1, length(labels)), size=(900, 400))

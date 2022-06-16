@@ -143,8 +143,11 @@ function read_fed(file)
   time_range = minimum(time_dim.val):min_step:maximum(time_dim.val)
   time_dim2 = Ti(time_range; metadata=time_dim.metadata)
   original_lon_range = pop!(lon_dim.metadata, "original_range")
-  lon_dim2 = Lon(original_lon_range[1]:original_lon_range[2]:original_lon_range[3]; metadata=lon_dim.metadata)
+  #lon_dim2 = Lon(original_lon_range[1]:original_lon_range[2]:original_lon_range[3]; metadata=lon_dim.metadata)
+  lon_dim2 = Lon(range(original_lon_range[1], original_lon_range[3], length(lon_dim)); metadata=lon_dim.metadata)
   original_lat_range = pop!(lat_dim.metadata, "original_range")
-  lat_dim2 = Lon(original_lat_range[1]:original_lat_range[2]:original_lat_range[3]; metadata=lat_dim.metadata)
+  #lat_dim2 = Lat(original_lat_range[1]:original_lat_range[2]:original_lat_range[3]; metadata=lat_dim.metadata)
+  lat_dim2 = Lat(range(original_lat_range[1], original_lat_range[3], length(lat_dim)); metadata=lat_dim.metadata)
   ClimArray(fed, (lon_dim2, lat_dim2, time_dim2))
 end
+

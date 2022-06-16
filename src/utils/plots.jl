@@ -18,11 +18,12 @@ function plot_results(x, y_pred, y)
 end
 
 
-function plot_many(samples, labels=1:length(samples); kws...)
+function plot_many(samples, labels=1:length(samples), truth=0; kws...)
   Ti = axes(samples[1], 3)
+  maybetitle(l, t) = (t <= truth) ? "Truth" : string(l)
   ps_list = [
     [
-      heatmap(sample[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing, title=string(l))
+      heatmap(sample[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing, title=maybetitle(l, i))
       for (sample, l) in zip(samples, labels)
     ]
     for i in Ti

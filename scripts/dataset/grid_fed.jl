@@ -68,8 +68,11 @@ monthly_records = Dict(keys(monthly_records) .=> collect.(Iterators.flatten.(val
 lcfa_merged = nothing
 GC.gc()
 
+resolutions = (; spatial = parsed_args[:spatial], 
+                 temporal = parsed_args[:temporal])
 
-mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID"))
+mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(resolutions; sort=false)))
+
 
 @info "generating ClimateArray"
 for (m, records) in monthly_records
@@ -81,15 +84,13 @@ for (m, records) in monthly_records
   fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
   props = (;  basename = String(split(basename(parsed_args[:file]), '.')[1]),
               month = m,
-              spatial = parsed_args[:spatial], 
-              temporal = parsed_args[:temporal], 
               compression = parsed_args[:compression],)
 
 
-  out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(props; sort=false)*".nc")
+  out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(resolutions; sort=false), savename(props; sort=false)*".nc")
   if ispath(out_path)
-      @info "Removing old dataset"
-      Base.unlink(out_path)
+    @info "Removing old dataset"
+    Base.unlink(out_path)
   end
 
   @info "saving results" out_path props...
