@@ -97,15 +97,20 @@ for file in files
   mkpath(parent_folder)
   
   climarr = read_fed(file)
-  
-  dataset = generate_dataset(climarr, parsed_args[:dimensions];
-    radius=parsed_args[:radius], 
-    min_neighbors=parsed_args[:min_neighbors], 
-    min_cluster_size=parsed_args[:min_cluster_size],
-    t_scale=parsed_args[:time_scale],
-    windows=parsed_args[:windows],
-  )
-  
+  dataset = nothing
+  try
+    dataset = generate_dataset(climarr, parsed_args[:dimensions];
+      radius=parsed_args[:radius], 
+      min_neighbors=parsed_args[:min_neighbors], 
+      min_cluster_size=parsed_args[:min_cluster_size],
+      t_scale=parsed_args[:time_scale],
+      windows=parsed_args[:windows],
+      threshold=parsed_args[:threshold],
+    )
+  catch
+    @warn "Skipping" basename(file)
+    continue
+  end
   _, instance_id, _ = parse_savename(file)
   
   instance_id = (; basename=instance_id["basename"], month=instance_id["month"], compression=parsed_args[:compression])
@@ -113,7 +118,7 @@ for file in files
   filepath = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id, savename(instance_id, "h5"; sort=false))
   threshold = parsed_args[:threshold]
   if parsed_args[:binary]
-    @. dataset["FED"] = dataset["FED"] > threshold
+    @. dataset["FED"] = dataset["FED"] >= threshold
   end
   @info "saving clusters" basename(filepath)
   h5open(filepath, "w") do file

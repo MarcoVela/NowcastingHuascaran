@@ -6,8 +6,8 @@ using Base.Iterators: product
 using Dates
 
 function climarr_cluster(arr::AbstractArray{T, N}; 
-  radius, min_neighbors, min_cluster_size, t_scale = 1) where {T,N}
-  found_idx = findall(>(zero(T)), arr)
+  radius, min_neighbors, min_cluster_size, t_scale = 1, threshold=zero(T)) where {T,N}
+  found_idx = findall(>(threshold), arr)
   idx_mat = reinterpret(reshape, Int, found_idx)
   points = Float32.(idx_mat)
   points[3,:] .*= t_scale
@@ -99,9 +99,9 @@ end
 # Parece que 2 es el radio ideal para obtener parches con tamaño medio de 24 frames y 10 de ancho,largo
 # Tambien parece que 4 de radio y 3 de escala temporal producen resultados similares en media de frames pero con 12 de ancho,largo
 
-function generate_dataset(climarr, dimensions; 
-  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions))) 
-  clusters = climarr_cluster(climarr; radius, min_neighbors, min_cluster_size, t_scale)
+function generate_dataset(climarr::AbstractArray{T, N}, dimensions; 
+  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=zero(T)) where {T, N}
+  clusters = climarr_cluster(climarr; radius, min_neighbors, min_cluster_size, t_scale, threshold)
   subarrs = moving_window(climarr, clusters, dimensions, windows)
   subarrs_to_plain(subarrs)
 end

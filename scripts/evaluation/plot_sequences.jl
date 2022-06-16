@@ -5,6 +5,11 @@ using ArgParse
 
 s = ArgParseSettings()
 
+function ArgParse.parse_item(::Type{Dict}, x::AbstractString)
+  savename_dict = DrWatson.parse_savename(x)[2]
+  Dict(Symbol.(keys(savename_dict)) .=> values(savename_dict))
+end
+
 @add_arg_table s begin
   "--metric", "-m"
     help = "Metric to select best experiment in a folder"
@@ -21,6 +26,14 @@ s = ArgParseSettings()
     help = "Directories of experiments to compare"
     range_tester = isdir
     action = :append_arg
+  "--override_dataset"
+    help = "Overrides dataset info"
+    required = false
+    arg_type = Dict
+    range_tester = x -> (haskey(x, :type) && haskey(x, :batchsize) && haskey(x, :splitratio))
+  "--override_dataset_path"
+    help = "Overrides dataset path"
+    required = false
 end
 args = parse_args(s; as_symbols=true)
 
@@ -48,11 +61,12 @@ experiments = [experiments_from_files..., experiments_from_folders...]
 datasets = [params[:dataset] for (_, params) in experiments]
 unique_datasets = unique(x -> x[:type], datasets)
 
-if !isone(length(unique_datasets))
+if isnothing(args[:override_dataset]) && !isone(length(unique_datasets))
   model_datasets = Dict(experiments .=> datasets)
   @error "All models should use the same dataset" model_datasets
 end
 
+if !isnothi
 dataset_path = first([params[:dataset_path] for (_, params) in experiments])
 dataset = first(datasets)
 dataset_type = pop!(dataset, :type)
