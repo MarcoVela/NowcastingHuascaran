@@ -143,6 +143,7 @@ const logfile2 = datadir("models", model_id, experiment_id, "logs.log")
 if logfile2 !== logfile
   logfile = logfile2
 end
+mkpath(dirname(logfile))
 const logger, close_logger = get_logger(logfile)
 
 const folder = dirname(logfile)
