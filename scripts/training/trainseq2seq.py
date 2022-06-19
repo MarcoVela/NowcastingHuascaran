@@ -17,6 +17,19 @@
 # See issue #620.
 # pytype: disable=wrong-keyword-args
 
+import os
+if 'COLAB_GPU' in os.environ:
+  import requests
+  if 'TPU_DRIVER_MODE' not in globals():
+    url = 'http://' + os.environ['COLAB_TPU_ADDR'].split(':')[0] + ':8475/requestversion/tpu_driver_nightly'
+    resp = requests.post(url)
+    TPU_DRIVER_MODE = 1
+    # TPU driver as backend for JAX
+    from jax.config import config
+    config.FLAGS.jax_xla_backend = "tpu_driver"
+    config.FLAGS.jax_backend_target = "grpc://" + os.environ['COLAB_TPU_ADDR']
+    print(config.FLAGS.jax_backend_target)
+
 from typing import Any, Dict, Tuple
 
 from absl import flags
@@ -28,7 +41,6 @@ import jax.numpy as jnp
 import optax
 from flax.training import train_state, checkpoints
 import sys
-import os
 
 current_folder = os.path.dirname(os.path.realpath(__file__))
 
