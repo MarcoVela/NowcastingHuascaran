@@ -34,6 +34,11 @@ end
   "--override_dataset_path"
     help = "Overrides dataset path"
     required = false
+  "--test_index"
+    help = "Index of test dataset sample"
+    default = 1
+    arg_type = Int
+    range_tester = >(0)
 end
 args = parse_args(s; as_symbols=true)
 
@@ -66,7 +71,6 @@ if isnothing(args[:override_dataset]) && !isone(length(unique_datasets))
   @error "All models should use the same dataset" model_datasets
 end
 
-if !isnothi
 dataset_path = first([params[:dataset_path] for (_, params) in experiments])
 dataset = first(datasets)
 dataset_type = pop!(dataset, :type)
@@ -78,7 +82,7 @@ include(srcdir("dataset", "$dataset_type.jl"))
 @info "Loading dataset"
 _, test_data = get_dataset(; dataset...)
 
-tx, ty = first(test_data)
+tx, ty = collect(test_data)[args[:test_index]]
 
 tx = copy(selectdim(tx, 4, 1:1))
 ty = copy(selectdim(ty, 4, 1:1))
