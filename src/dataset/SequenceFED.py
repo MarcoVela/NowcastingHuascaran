@@ -6,7 +6,9 @@ import numpy as np
 
 def read_from_file(path):
   f = h5py.File(path, "r")
-  return f["FED"][:]
+  arr = f["FED"][:]
+  t,n,_,w,h = arr.shape
+  return arr.reshape(t,n,w,h,1).copy()
 
 def read_from_folder(path):
   paths = [os.path.join(path, x) for x in os.listdir(path)]
@@ -26,10 +28,10 @@ def get_dataset(splitratio, batchsize, N, path):
   dataset_train = dataset[:, :N_TRAIN]
   dataset_test = dataset[:, N_TRAIN+1:]
   x_train = (jnp.array(dataset_train[:N, t:t+batchsize]) for t in range(0, N_TRAIN-batchsize+1, batchsize))
-  y_train = (jnp.array(dataset_train[N+1:, t:t+batchsize]) for t in range(0, N_TRAIN-batchsize+1, batchsize))
+  y_train = (jnp.array(dataset_train[N:, t:t+batchsize]) for t in range(0, N_TRAIN-batchsize+1, batchsize))
   train_data = zip(x_train, y_train)
   x_test = (jnp.array(dataset_test[:N, t:t+batchsize]) for t in range(0, N_TEST-batchsize+1, batchsize))
-  y_test = (jnp.array(dataset_test[N+1:, t:t+batchsize]) for t in range(0, N_TEST-batchsize+1, batchsize))
+  y_test = (jnp.array(dataset_test[N:, t:t+batchsize]) for t in range(0, N_TEST-batchsize+1, batchsize))
   test_data = zip(x_test, y_test)
   return (train_data, test_data)
 

@@ -80,7 +80,7 @@ def train_step(state: train_state.TrainState, X: Array, y: Array, lstm_rng: PRNG
   lstm_key = jax.random.fold_in(lstm_rng, state.step)
 
   def loss_fn(params):
-    preds, _ = state.apply_fn({'params': params},
+    preds = state.apply_fn({'params': params},
                                X,
                                rngs={'lstm': lstm_key})
     loss = binary_cross_entropy_loss(preds, y)
@@ -117,7 +117,7 @@ def main(_):
 
   variables = model.init(
     {'params': rng1, 'lstm': rng2},
-    jnp.ones((dataset_params["N"], 1, 1, 64, 64)),
+    jnp.ones((dataset_params["N"], 2, 64, 64, 1)),
   )
 
   experiment_params = {
