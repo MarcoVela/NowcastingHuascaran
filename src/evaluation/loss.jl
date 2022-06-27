@@ -12,6 +12,10 @@ module MyLosses
     c = csi(args...; kwargs...)
     one(eltype(c)) - c
   end
+
+  function logcsi(args...; kwargs...) 
+    -log(csi(args...; kwargs...))
+  end
 end
 
 function get_metric(s::Symbol)

@@ -122,7 +122,7 @@ const loss_f = get_metric(args[:loss])
 
 CUDA.functional(args[:device] == :gpu)
 
-const device = args[:device] == :gpu ? gpu : cpu
+const accel_device = args[:device] == :gpu ? gpu : cpu
 
 @info "Building model"
 if !isnothing(args[:base_model])
@@ -130,7 +130,7 @@ if !isnothing(args[:base_model])
   args[:architecture][:base_model] = BSON.load(args[:base_model])[:model]
 end
 
-const model, ps = build_model(; device, args[:architecture]...)
+const model, ps = build_model(; device=accel_device, args[:architecture]...)
 show(stdout, "text/plain", cpu(model))
 println(stdout)
 
@@ -141,7 +141,7 @@ const opt = get_opt(optimiser_type)(; args[:optimiser]...)
 
 function loss(X, y)
   Flux.reset!(model)
-  X_dev = device(X)
+  X_dev = accel_device(X)
   y_pred = cpu(model(X_dev))
   loss_f(y_pred, y)
 end
@@ -205,7 +205,7 @@ for epoch in 1:args[:epochs]
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
   @info "Testing..." epoch
-  metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
+  metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((accel_device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
   original_metrics = deepcopy(metrics_dict)
   metrics_dict[:test_loss] = metrics_dict[loss_name]
