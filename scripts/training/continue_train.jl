@@ -33,18 +33,30 @@ end
   "--model_file"
     help = "Specific file to load"
     range_tester = isfile
+  "--loss" # TODO: Revisar si será necesario pasar argumentos extras
+    help = "Loss function"
+    arg_type = Symbol
+  "--optimiser", "-o"
+    help = "Optimiser settings"
+    arg_type = Dict
+    range_tester = x -> (haskey(x, :type) && haskey(x, :lr))
+  "--device"
+    help = "Device (gpu|cpu)"
+    arg_type = Symbol
+    default = :gpu
 end
 
 args = parse_args(s; as_symbols=true)
-
+include(srcdir("evaluation", "load_experiment.jl"))
 include(srcdir("utils", "parse_logs.jl"))
+
 logfile = args[:file]
 override_dataset = args[:dataset]
 override_dataset_path = args[:dataset_path]
 force = args[:force]
 model_file = args[:model_file]
 epochs_continue = args[:epochs]
-
+device_acc = args[:device]
 (; first_log, train_logs, test_logs, last_log) = read_log_file(logfile)
 
 log_args = first_log.payload
@@ -66,8 +78,16 @@ if !force && !isnothing(last_log)
     epochs = args[:epochs]
   end
 end
+prev_args = args
 
 args = log_args
+
+if !isnothing(model_file)
+  model_raw, args = load_experiment(model_file)
+else
+  model_raw, model_dict = load_best_experiment(dirname(logfile), args[:loss]; sort="min")
+end
+
 if !isnothing(override_dataset)
   args[:dataset] = override_dataset
 end
@@ -81,10 +101,18 @@ architecture_type = pop!(args[:architecture], :type)
 dataset_type = pop!(args[:dataset], :type)
 dataset_path = pop!(args, :dataset_path)
 
-
+if !isnothing(prev_args[:optimiser])
+  args[:optimiser] = prev_args[:optimiser]
+end
 
 optimiser_type = Symbol(pop!(args[:optimiser], :type))
 loss_name = Symbol(args[:loss])
+if !isnothing(prev_args[:loss])
+  loss_name = prev_args[:loss]
+end
+
+
+
 batchsize = args[:dataset][:batchsize]
 lr = args[:optimiser][:lr]
 
@@ -99,7 +127,6 @@ include(srcdir("optimisers", "optimiser.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))
 include(srcdir("evaluation", "loss.jl"))
-include(srcdir("evaluation", "load_experiment.jl"))
 
 using Flux
 using Flux: throttle, params
@@ -109,18 +136,14 @@ using Dates
 
 const loss_f = get_metric(Symbol(args[:loss]))
 
-CUDA.functional(args[:device] == "gpu")
+CUDA.functional(device_acc == :gpu)
 
-const device = args[:device] == "gpu" ? gpu : cpu
+const device_accelerator = device_acc == :gpu ? gpu : cpu
 
 @info "Building model"
 
-if !isnothing(model_file)
-  model_raw, _ = load_experiment(model_file)
-else
-  model_raw, _ = load_best_experiment(dirname(logfile), args[:loss]; sort="min")
-end
-const model = device(model_raw)
+
+const model = device_accelerator(model_raw)
 const ps = Flux.params(model)
 
 show(stdout, "text/plain", cpu(model))
@@ -133,7 +156,7 @@ const opt = get_opt(optimiser_type)(; args[:optimiser]...)
 
 function loss(X, y)
   Flux.reset!(model)
-  X_dev = device(X)
+  X_dev = device_accelerator(X)
   y_pred = cpu(model(X_dev))
   loss_f(y_pred, y)
 end
@@ -201,7 +224,7 @@ for epoch in prev_experiments:(prev_experiments+epochs_continue)
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
   @info "Testing..." epoch
-  metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
+  metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device_accelerator(X), y) for (X,y) in test_data))
   Flux.reset!(model)
   original_metrics = deepcopy(metrics_dict)
   metrics_dict[:test_loss] = metrics_dict[loss_name]

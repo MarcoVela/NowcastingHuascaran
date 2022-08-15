@@ -3,7 +3,11 @@ module MyOptimisers
   using Flux
   using Flux.Optimise
   function ADAMExpDecay(; lr, decay, decaystep)
-    Optimiser(Flux.Optimise.ADAM(lr), ExpDecay(1.0, decay, decaystep))
+    Optimiser(ExpDecay(1.0, decay, decaystep), Flux.Optimise.ADAM(lr))
+  end
+
+  function ADAMClipped(; lr, clip)
+    Optimiser(Flux.Optimise.ClipValue(clip), Flux.Optimise.ADAM(lr))
   end
 
   ADAM(; lr) = Flux.Optimise.ADAM(lr)

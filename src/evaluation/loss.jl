@@ -16,6 +16,13 @@ module MyLosses
   function logcsi(args...; kwargs...) 
     -log(csi(args...; kwargs...))
   end
+
+  function csit(ŷ, y)
+    ndim = ndims(y)
+    n = size(y, ndim)
+    scores = collect(csi(a,b) for (a,b) in zip(eachslice(ŷ; dims=ndim), eachslice(y; dims=ndim)))
+    Dict(1:n .=> scores)
+  end
 end
 
 function get_metric(s::Symbol)

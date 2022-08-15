@@ -99,9 +99,11 @@ loss_name = args[:loss]
 batchsize = args[:dataset][:batchsize]
 lr = args[:optimiser][:lr]
 
+using UUIDs
+
 
 const model_id = savename((; architecture=architecture_type, dataset=dataset_type))
-const experiment_id = savename((; batchsize, loss=loss_name, lr, opt=optimiser_type, gitstatus=gitdescribe()), sort=false)
+const experiment_id = savename((; loss=loss_name, batchsize, lr, opt=optimiser_type, id=string(uuid4())), sort=false)
 
 @info "Including source" architecture_type dataset_type optimiser_type
 
@@ -170,10 +172,15 @@ mkpath(dirname(logfile))
 isfile(logfile) && Base.unlink(logfile)
 const logger, close_logger = get_logger(logfile)
 
+train_losses = Vector{Float32}()
+test_losses = Vector{Float32}()
+
 function log_loss(epoch)
   val_test, exec_time_test = CUDA.@timed loss(test_sample_x, test_sample_y)
   val_train, exec_time_train = CUDA.@timed loss(train_sample_x, train_sample_y)
   exec_time = mean((exec_time_test, exec_time_train))
+  push!(train_losses, val_train)
+  push!(test_losses, val_test)
   Base.with_logger(logger) do 
     @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
   end
@@ -204,12 +211,16 @@ for epoch in 1:args[:epochs]
   Base.with_logger(logger) do
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
+  @info "Metrics during train" mean_train_loss=mean(train_losses) mean_test_loss=mean(test_losses)
+
   @info "Testing..." epoch
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((accel_device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
   original_metrics = deepcopy(metrics_dict)
   metrics_dict[:test_loss] = metrics_dict[loss_name]
   push!(epoch_losses, metrics_dict[loss_name])
+  @info "Metrics during test" metrics_dict...
+
   Base.with_logger(logger) do
     @info "EPOCH_TEST" epoch exec_time=test_time metrics_dict...
   end
@@ -233,6 +244,8 @@ for epoch in 1:args[:epochs]
     @info "STOP_TRAIN" epoch stop_cause
     break
   end
+  empty!(train_losses)
+  empty!(test_losses)
 end
 
 @info "Finished training"

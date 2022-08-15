@@ -4,8 +4,6 @@ from jax import numpy as jnp, random
 from flax import linen as nn
 import functools
 
-from src.utils import drwatson
-
 Array = Any
 
 class EncoderConvLSTM(nn.Module):

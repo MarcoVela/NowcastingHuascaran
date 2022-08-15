@@ -11,7 +11,7 @@ function read_from_folder(path)
   cat(datasets...; dims=4)
 end
 
-function get_dataset(; splitratio, batchsize, N, path)
+function get_dataset(; splitratio, batchsize, N, path, kwargs...)
   @assert ispath(path) "$path is not a path"
   if isfile(path)
     dataset = read_from_file(path)

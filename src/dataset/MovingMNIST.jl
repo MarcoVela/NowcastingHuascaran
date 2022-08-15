@@ -2,7 +2,7 @@ using HDF5
 using DrWatson
 
 #WxHxCxNxT
-function get_dataset(; splitratio, batchsize, N, path=datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5"))
+function get_dataset(; splitratio, batchsize, N, path=datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5"), kwargs...)
   mnist_whole = h5read(path, "moving_mnist")
   TOTAL_SAMPLES = size(mnist_whole, 4)
   TOTAL_FRAMES = size(mnist_whole, 5)

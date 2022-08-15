@@ -23,7 +23,7 @@ function plot_many(samples, labels=1:length(samples), truth=0; kws...)
   maybetitle(l, t) = (t <= truth) ? "Truth" : string(l)
   ps_list = [
     [
-      heatmap(sample[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing, title=maybetitle(l, i))
+      heatmap(sample[:,:,i], clims=(0,1), c=[:black, :white], colorbar=nothing, title=maybetitle(l, i), size=(64, 64))
       for (sample, l) in zip(samples, labels)
     ]
     for i in Ti
@@ -35,3 +35,15 @@ function plot_many(samples, labels=1:length(samples), truth=0; kws...)
   end
   gif(g; fps)
 end
+
+using Measures
+
+function plot_many_label(data, label)
+  ps = []
+  for (i, d) in enumerate(eachslice(data, dims=3))
+      p = heatmap(d, c=[:black, :white], clims=(0,1), aspect_ratio=:equal, legend=false, framestyle = :none, title="$label $i", margin=1mm)
+      push!(ps, p)
+  end
+  ps
+end
+

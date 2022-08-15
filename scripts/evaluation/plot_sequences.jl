@@ -39,6 +39,10 @@ end
     default = 1
     arg_type = Int
     range_tester = >(0)
+  "--append_input"
+    help = "Appends input sequence at the start of in prediction"
+    action = :store_true
+    default = false
 end
 args = parse_args(s; as_symbols=true)
 
@@ -74,13 +78,13 @@ end
 dataset_path = first([params[:dataset_path] for (_, params) in experiments])
 dataset = first(datasets)
 dataset_type = pop!(dataset, :type)
-dataset[:path] = dataset_path
+!isnothing(dataset_path) && (dataset[:path] = dataset_path)
 
 include(srcdir("dataset", "$dataset_type.jl"))
 
 
 @info "Loading dataset"
-_, test_data = get_dataset(; dataset...)
+_, test_data = get_dataset(; dataset..., batchsize=1)
 
 tx, ty = collect(test_data)[args[:test_index]]
 
@@ -92,11 +96,15 @@ rtx = reshape(tx, W, H, :)
 
 include(srcdir("utils", "plots.jl"))
 
-@info "Making predictions"
+@info "Doing inference"
 models = [m for (m, _) in experiments]
-preds = [cat(rtx, reshape(model(tx), W, H, :); dims=3) for model in models]
+if args[:append_input]
+  preds = [cat(rtx, reshape(model(tx), W, H, :); dims=3) for model in models]
+else
+  preds = [cat(zeros(eltype(rtx), size(rtx)), reshape(model(tx), W, H, :); dims=3) for model in models]
+end
 
-Ti_truth = size(reshape(first(models)(tx), W, H, :), 3)
+Ti_truth = size(rtx, 3)
 
 labels = [["model_$i" for i in 1:length(models)]..., "Truth"]
 samples = [preds..., cat(rtx, ty; dims=3)]

@@ -50,3 +50,10 @@ end
 
 
 ncat(A::AbstractArray{T, N}...) where {T, N} = cat(A...; dims=Val(N))
+
+using Flux
+
+function Flux.gate(x::AbstractArray{T, N}, h, n) where {T, N}
+  before_dims = ntuple(_ -> :, N-2)
+  view(x, before_dims..., Flux.gate(h, n), :)
+end

@@ -72,7 +72,7 @@ function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, 
     for r in group
       append!(grid, (r.longitude, r.latitude, fill(Dates.value(t), length(r.latitude))))
     end
-    view(grid.weights, :, :, searchsortedlast(time_edge, Dates.value(t))) ./= length(group)
+    # view(grid.weights, :, :, searchsortedlast(time_edge, Dates.value(t))) ./= length(group)
   end
   lon_dim = Lon(lon_range[begin:end-1]; metadata=ClimateBase.Metadata(
     "units"         => "degrees_east",
