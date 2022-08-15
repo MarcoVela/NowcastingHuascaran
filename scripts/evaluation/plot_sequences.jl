@@ -42,7 +42,6 @@ end
   "--append_input"
     help = "Appends input sequence at the start of in prediction"
     action = :store_true
-    default = false
 end
 args = parse_args(s; as_symbols=true)
 

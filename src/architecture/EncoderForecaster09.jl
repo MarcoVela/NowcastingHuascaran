@@ -75,7 +75,7 @@ end
 
 Flux.@functor SharedState
 
-function build_model(; out, device)
+function build_model(; out, device, dropout=.25)
   _model = Chain(
     TimeDistributed(
       Chain(
@@ -85,7 +85,7 @@ function build_model(; out, device)
         C3(64 => 64, n=3),
       ),
     ),
-    Dropout(.3; dims=3),
+    Dropout(dropout; dims=3),
     SharedState(
       Encoder(ConvLSTM2Dv2((32, 32), (3, 3), (3, 3), 64=>64, pad=SamePad(), bias=false)),
       Chain(
@@ -95,7 +95,7 @@ function build_model(; out, device)
             BatchNorm(128),
             x -> Flux.swish.(x),
             C3(128 => 128, n=3),
-            Dropout(.25; dims=3),
+            Dropout(dropout; dims=3),
           ),
         ),
         Seq2Seq(
@@ -114,7 +114,7 @@ function build_model(; out, device)
             Conv((1, 1), 64 => 64, pad=SamePad(), bias=false),
             BatchNorm(64),
             x -> Flux.swish.(x),
-            Dropout(.25; dims=3),
+            Dropout(dropout; dims=3),
           ),
         ),
       ),
