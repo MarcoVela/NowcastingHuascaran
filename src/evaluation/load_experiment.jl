@@ -19,3 +19,5 @@ function load_best_experiment(folder, metric; suffix="bson", sort)
   filename = joinpath(folder, files[i])
   load_experiment(filename)
 end
+
+function load_

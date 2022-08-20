@@ -108,4 +108,4 @@ Ti_truth = size(rtx, 3)
 labels = [["model_$i" for i in 1:length(models)]..., "Truth"]
 samples = [preds..., cat(rtx, ty; dims=3)]
 
-plot_many(samples, labels, Ti_truth; layout=(1, length(labels)), size=(900, 400))
+plot_many(samples, labels, Ti_truth; layout=(1, length(labels)), size=(400+length(models)*400, 400))

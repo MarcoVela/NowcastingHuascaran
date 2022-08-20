@@ -101,9 +101,9 @@ lr = args[:optimiser][:lr]
 
 using UUIDs
 
-
+const exp_id=string(uuid4())
 const model_id = savename((; architecture=architecture_type, dataset=dataset_type))
-const experiment_id = savename((; loss=loss_name, batchsize, lr, opt=optimiser_type, id=string(uuid4())), sort=false)
+const experiment_id = savename((; loss=loss_name, batchsize, lr, opt=optimiser_type, id=exp_id), sort=false)
 
 @info "Including source" architecture_type dataset_type optimiser_type
 
@@ -190,7 +190,7 @@ Base.with_logger(logger) do
   @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
 end
 
-@info "Starting training for $(args[:epochs]) epochs"
+@info "Starting training for $(args[:epochs]) epochs" id=exp_id
 
 stop_callbacks = []
 stop_functions = [
@@ -231,6 +231,7 @@ for epoch in 1:args[:epochs]
   args_dict[:architecture][:type] = architecture_type
   args_dict[:dataset][:type] = dataset_type
   args_dict[:optimiser][:type] = optimiser_type
+  args_dict[:id] = exp_id
   @tag!(args_dict, storepatch=true)
 
   iteration_id = savename((; epoch, original_metrics...), "bson"; digits=5, sort=false)
