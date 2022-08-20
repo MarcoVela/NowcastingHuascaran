@@ -60,20 +60,18 @@ end
 
 Flux.@functor Seq2Seq
 
-struct SharedState{S1,M,S2}
+struct ShortCircuit{S1,M}
   s1::S1
   m::M
-  s2::S2
 end
 
-function (s::SharedState)(x::AbstractArray{T, N}) where {T,N}
-  state, out = s.s1(x)
+function (s::ShortCircuit)(x::AbstractArray{T, N}) where {T,N}
+  out = s.s1(x)
   out2 = s.m(out)
-  s.s2.state = state
-  s.s2(out2)
+  s.s1(out2)
 end
 
-Flux.@functor SharedState
+Flux.@functor ShortCircuit
 
 function build_model(; out, device, dropout=.25)
   _model = Chain(
@@ -86,8 +84,8 @@ function build_model(; out, device, dropout=.25)
       ),
     ),
     Dropout(dropout; dims=3),
-    SharedState(
-      Encoder(ConvLSTM2Dv2((32, 32), (3, 3), (3, 3), 64=>64, pad=SamePad(), bias=false)),
+    ShortCircuit(
+      ConvLSTM2Dv2((32, 32), (3, 3), (3, 3), 64=>64, pad=SamePad(), bias=false),
       Chain(
         TimeDistributed(
           Chain(
@@ -118,7 +116,6 @@ function build_model(; out, device, dropout=.25)
           ),
         ),
       ),
-      ConvLSTM2Dv2((32, 32), (3, 3), (3, 3), 64=>64, pad=SamePad(), bias=false),
     ),
     TimeDistributed(
       Chain(
