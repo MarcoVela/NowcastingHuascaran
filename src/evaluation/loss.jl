@@ -14,7 +14,7 @@ module MyLosses
   end
 
   function logcsi(args...; kwargs...) 
-    -log(csi(args...; kwargs...))
+    -log1p(csi(args...; kwargs...))
   end
 
   function csit(ŷ, y)

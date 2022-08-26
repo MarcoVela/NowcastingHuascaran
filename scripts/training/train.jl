@@ -207,6 +207,7 @@ end
 for epoch in 1:args[:epochs]
   log_loss_cb = throttle(() -> log_loss(epoch), args[:throttle])
   @info "Training..." epoch
+  trainmode!(model)
   train_time = CUDA.@elapsed train_single_epoch!(ps, loss, train_data, opt, cb=log_loss_cb)
   Base.with_logger(logger) do
     @info "EPOCH_TRAIN" epoch exec_time=train_time
@@ -214,6 +215,7 @@ for epoch in 1:args[:epochs]
   @info "Metrics during train" mean_train_loss=mean(train_losses) mean_test_loss=mean(test_losses)
 
   @info "Testing..." epoch
+  testmode!(model)
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((accel_device(X), y) for (X,y) in test_data))
   Flux.reset!(model)
   original_metrics = deepcopy(metrics_dict)
