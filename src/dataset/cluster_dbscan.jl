@@ -7,7 +7,8 @@ using Dates
 
 function climarr_cluster(arr::AbstractArray{T, N}; 
   radius, min_neighbors, min_cluster_size, t_scale = 1, threshold=zero(T)) where {T,N}
-  found_idx = findall(>(threshold), arr)
+  found_idx = findall(>=(threshold), arr)
+
   idx_mat = reinterpret(reshape, Int, found_idx)
   points = Float32.(idx_mat)
   points[3,:] .*= t_scale
@@ -18,14 +19,16 @@ function climarr_cluster(arr::AbstractArray{T, N};
   ]
 end
 
-function bbox(cluster::AbstractVector{CartesianIndex{N}}) where {N}
+function bbox(cluster::AbstractVector{CartesianIndex{N}}, padding::NTuple{N} = ntuple(_ -> 0, N)) where {N}
   cluster_arr = reinterpret(reshape, Int, cluster)
-  ntuple(i -> extrema(@view(cluster_arr[i, :])), N)
+  ntuple(i -> extrema(@view(cluster_arr[i, :])) .+ (-padding[i], padding[i]), N)
 end
 
 function expand_bbox(box::NTuple{N}, min_dims::NTuple{N}, limits::NTuple{N}) where {N}
   ntuple(i -> begin
     lower, upper = box[i]
+    lower = max(lower, 1)
+    upper = min(upper, limits[i])
     range = upper - lower
     if lower - (min_dims[i] - range) ÷ 2 < 1
       lower = 1
@@ -51,12 +54,13 @@ function expand_bbox(box::NTuple{N}, min_dims::NTuple{N}, limits::NTuple{N}) whe
 end
 
 
-function moving_window(climarr, clusters, dimensions, windows)
+function moving_window(climarr, clusters, dimensions, windows, padding)
   for i in 1:length(dimensions)
     @assert length(climarr.dims[i]) >= dimensions[i]
   end
   limits = tuple([length(x) for x in dims(climarr)]...)
-  boxes = expand_bbox.(bbox.(clusters), Ref(dimensions), Ref(limits))
+  bboxes = bbox.(clusters, Ref(padding))
+  boxes = expand_bbox.(bboxes, Ref(dimensions), Ref(limits))
   res = Vector{typeof(climarr[ntuple(_->:, length(dims(climarr)))])}()
   N = length(dimensions)
   for box in boxes
@@ -100,9 +104,10 @@ end
 # Tambien parece que 4 de radio y 3 de escala temporal producen resultados similares en media de frames pero con 12 de ancho,largo
 
 function generate_dataset(climarr::AbstractArray{T, N}, dimensions; 
-  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=zero(T)) where {T, N}
+  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=zero(T), padding=ntuple(_->0, length(dimensions))) where {T, N}
   clusters = climarr_cluster(climarr; radius, min_neighbors, min_cluster_size, t_scale, threshold)
-  subarrs = moving_window(climarr, clusters, dimensions, windows)
+  subarrs = moving_window(climarr, clusters, dimensions, windows, padding)
+  filter!(arr -> sum(arr) > min_cluster_size, subarrs)
   subarrs_to_plain(subarrs)
 end
 

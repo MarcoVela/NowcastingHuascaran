@@ -1,6 +1,10 @@
 module MyLosses
   import Statistics
   using Flux.Losses
+  using MLJBase: f1score
+  using Suppressor
+  using OrderedCollections
+
   function csi(ŷ, y; agg = sum)
     _one = one(eltype(y))
     intersection = agg(ŷ .* y)
@@ -21,7 +25,22 @@ module MyLosses
     ndim = ndims(y)
     n = size(y, ndim)
     scores = collect(csi(a,b) for (a,b) in zip(eachslice(ŷ; dims=ndim), eachslice(y; dims=ndim)))
-    Dict(1:n .=> scores)
+    OrderedDict(1:n .=> scores)
+  end
+
+  function f1(ŷ, y, thresholds=.05:.05:.95)
+    @suppress begin
+      y = y .> 0.9
+      val, threshold = findmax(t -> f1score(ŷ .> t, y), thresholds)
+      return (; score=val, threshold=threshold)
+    end
+  end
+
+  function f1_threshold(ŷ, y, thresholds=.05:.05:.95)
+    @suppress begin
+      y = y .> 0.9
+      Dict(thresholds .=> [f1score(ŷ .> t, y) for t in thresholds])
+    end
   end
 end
 

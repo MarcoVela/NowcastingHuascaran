@@ -251,7 +251,7 @@ for epoch in 1:args[:epochs]
   empty!(test_losses)
 end
 
-@info "Finished training"
+@info "Finished training" datetime=now()
 
 Base.with_logger(logger) do 
   @info "FINISH" 

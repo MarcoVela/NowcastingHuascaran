@@ -124,7 +124,7 @@ function ncwrite_compressed(file::String, Xs; globalattr = Dict(), deflatelevel)
       isnothing(attrib) && (attrib = Dict())
       dnames = ClimateBase.dim_to_commonname.(dims(X))
       data = Array(X)
-      ClimateBase.defVar(ds, n, data, (dnames...,); attrib, deflatelevel)
+      ClimateBase.NCDatasets.defVar(ds, n, data, (dnames...,); attrib, deflatelevel)
     end
   finally
     close(ds)

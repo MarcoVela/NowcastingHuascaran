@@ -44,8 +44,7 @@ end
     default = 1.0
   "--binary"
     help = "to transform the dataset into binary classification"
-    arg_type = Bool
-    default = true
+    action = :store_true
   "--compression"
     help = "compression level for output file"
     arg_type = Int
@@ -55,9 +54,14 @@ end
     help = "Folder instead of files"
     range_tester = isdir
   "--threshold"
-    help = "threshold for binarization"
+    help = "threshold for filtering and binarization"
     default = zero(Float32)
     arg_type = Float32
+  "--padding"
+    help = "Padding to add to windows (lon, lat, time)"
+    arg_type = NTuple{3, Int}
+    default = (0, 0, 0)
+    range_tester = t -> all(>=(0), t)
 end
 
 parsed_args = parse_args(ARGS, s; as_symbols=true)
@@ -91,6 +95,7 @@ for file in files
     t_scale=parsed_args[:time_scale],
     windows=parsed_args[:windows],
     dimensions=parsed_args[:dimensions],
+    padding=parsed_args[:padding],
   ), sort=false, allowedtypes=[Any])
   
   parent_folder = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id)
@@ -106,9 +111,10 @@ for file in files
       t_scale=parsed_args[:time_scale],
       windows=parsed_args[:windows],
       threshold=parsed_args[:threshold],
+      padding=parsed_args[:padding],
     )
-  catch
-    @warn "Skipping" basename(file)
+  catch e
+    @warn "Skipping" basename(file) e
     continue
   end
   _, instance_id, _ = parse_savename(file)
