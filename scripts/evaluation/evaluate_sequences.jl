@@ -68,8 +68,12 @@ end
 N = sum(x->size(x[1],4), test_data)
 tx, ty = first(test_data)
 W,H,C = size(tx)[1:3]
-T = size(tx, 5)
-test_y = zeros(Float32, W,H,C, N, T)
+Tx = size(tx, 5)
+Ty = size(ty, 5)
+
+test_y = zeros(Float32, W,H,C, N, Ty)
+test_x = zeros(Float32, W,H,C, N, Tx)
+
 pred_y = deepcopy(test_y)
 using ProgressMeter
 Flux.testmode!(model)
@@ -78,16 +82,21 @@ Flux.testmode!(model)
   p_y = model(tx)
   pred_y[:,:,:,(i-1)*B+1:i*B,:] .= p_y[:,:,:,:,:]
   test_y[:,:,:,(i-1)*B+1:i*B,:] .= ty[:,:,:,:,:]
+  test_x[:,:,:,(i-1)*B+1:i*B,:] .= tx[:,:,:,:,:]
 end
 
 include(srcdir("evaluation", "loss.jl"))
+
+persistence_model = deepcopy(test_y)
+persistence_model[:,:,:,:,:] .= test_x[:,:,:,:,end:end]
 
 for metric in args[:metric]
   @info "Calculating metric" metric
   metric = get_metric(metric)
 
   scores = metric(pred_y, test_y)
-  
+  scores_persistence = metric(persistence_model, test_y)
+
   using Plots
   
   if typeof(scores) <: AbstractDict
@@ -96,7 +105,8 @@ for metric in args[:metric]
     xs = 1:length(scores)
   end
 
-  p = plot(scores, title=metric, xticks=xs, label=nothing; marker=:circle)
+  p = plot(scores, title=metric, xticks=xs, label="model"; marker=:circle)
+  plot!(scores_persistence, label="persistence"; marker=:circle)
   
   if args[:clipboard]
     using ImageClipboard
