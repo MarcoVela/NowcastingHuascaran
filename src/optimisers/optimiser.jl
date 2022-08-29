@@ -14,6 +14,10 @@ module MyOptimisers
 
   RMSProp(; lr, rho=0.9) = Flux.Optimise.RMSProp(lr, rho)
 
+  function RMSPropClipped(; lr, clip)
+    Optimiser(Flux.Optimise.ClipValue(clip), Flux.Optimise.RMSProp(lr))
+  end
+
   function RMSPropExpDecay(; lr, decay, decaystep)
     Optimiser(Flux.Optimise.RMSProp(lr), ExpDecay(1.0, decay, decaystep))
   end
