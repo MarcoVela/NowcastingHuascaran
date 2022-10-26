@@ -9,6 +9,7 @@ s = ArgParseSettings()
   "--metric", "-m"
     help = "Metrics to compare"
     arg_type = Symbol
+    required = true
   "--dir", "-d"
     help = "Directories of experiments to compare"
     range_tester = isdir
@@ -54,7 +55,12 @@ function extract_relevant_fields(metadata)
   metrics = Dict(Symbol.(:metric_, metadata[:metrics]) .=> get.(Ref(metadata), metadata[:metrics], missing))
   epoch = metadata[:epoch]
   architecture = Dict(Symbol.(:architecture_, keys(metadata[:architecture])) .=> values(metadata[:architecture]))
-  opt = Dict(Symbol.(:optimiser_, keys(metadata[:optimiser])) .=> values(metadata[:optimiser]))
+  metadata_optimiser = metadata[:optimiser]
+  if isa(metadata_optimiser, Dict)
+    opt = Dict(:optimiser_type => metadata[:optimiser][:type], :optimiser_1 => "$(metadata[:optimiser][:type])($(get(metadata[:optimiser], :lr, 0)))")
+  else
+    opt = Dict(:optimiser_type => get(metadata, :optimiser_type, missing), (Symbol.(:optimiser_, 1:length(metadata[:optimiser])) .=> metadata[:optimiser])...)
+  end
   dataset = Dict(Symbol.(:dataset_, keys(metadata[:dataset])) .=> values(metadata[:dataset]))
   id = get(metadata, :id, missing)
   OrderedDict(

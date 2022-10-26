@@ -24,9 +24,9 @@ end
 @add_arg_table s begin
   "--optimiser", "-o"
       help = "Optimiser settings"
-      arg_type = Dict
       required = true
-      range_tester = x -> (haskey(x, :type) && haskey(x, :lr))
+      arg_type = String
+      action = :append_arg
   "--architecture", "-a"
       help = "Architecture settings"
       arg_type = Dict
@@ -94,18 +94,24 @@ if !isnothing(dataset_path)
   args[:dataset][:path] = dataset_path
 end
 
-optimiser_type = Symbol(pop!(args[:optimiser], :type))
+optimisers = args[:optimiser]
+
+if length(optimisers) == 1
+  optimiser_type = only(optimisers)
+else
+  optimiser_type = "Optimiser"
+end
+
 loss_name = args[:loss]
 batchsize = args[:dataset][:batchsize]
-lr = args[:optimiser][:lr]
 
 using UUIDs
 
 const exp_id=string(uuid4())
 const model_id = savename((; architecture=architecture_type, dataset=dataset_type))
-const experiment_id = savename((; loss=loss_name, batchsize, lr, opt=optimiser_type, id=exp_id), sort=false)
+const experiment_id = savename((; loss=loss_name, batchsize, opt=optimiser_type, id=exp_id), sort=false)
 
-@info "Including source" architecture_type dataset_type optimiser_type
+@info "Including source" architecture_type dataset_type
 
 include(srcdir("dataset", "$dataset_type.jl"))
 include(srcdir("architecture", "$architecture_type.jl"))
@@ -113,6 +119,8 @@ include(srcdir("optimisers", "optimiser.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))
 include(srcdir("evaluation", "loss.jl"))
+
+const opt = build_optimiser(optimisers)
 
 using Flux
 using Flux: throttle, params
@@ -139,7 +147,6 @@ println(stdout)
 @info "Obtaining dataset"
 const train_data, test_data = @time get_dataset(; args[:dataset]...)
 
-const opt = get_opt(optimiser_type)(; args[:optimiser]...)
 
 function loss(X, y)
   Flux.reset!(model)
@@ -232,7 +239,7 @@ for epoch in 1:args[:epochs]
   args_dict[:date] = Dates.now()
   args_dict[:architecture][:type] = architecture_type
   args_dict[:dataset][:type] = dataset_type
-  args_dict[:optimiser][:type] = optimiser_type
+  args_dict[:optimiser_type] = optimiser_type
   args_dict[:id] = exp_id
   @tag!(args_dict, storepatch=true)
 

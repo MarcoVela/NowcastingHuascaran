@@ -39,17 +39,27 @@ end
     help = "Pick a subset to evaluate"
     default = -1
     arg_type = Int
+  "--device"
+    help = "Device to run experiments on"
+    default = :cpu
+    arg_type = Symbol
+    range_tester = in([:cpu, :gpu])
+  "--persistence"
+    action = :store_true
+    help = "Compare against persistence method"
 end
 args = parse_args(s; as_symbols=true)
 
 using Flux
+const devices = Dict(:cpu => cpu, :gpu => gpu)
+const device = devices[args[:device]]
 
 include(srcdir("evaluation", "load_experiment.jl"))
 
 @info "Loading from files"
 experiment = load_experiment(args[:file])
 dataset = experiment[2][:dataset]
-model = experiment[1]
+model = experiment[1] |> device
 dataset_path = experiment[2][:dataset_path]
 dataset_type = pop!(dataset, :type)
 !isnothing(dataset_path) && (dataset[:path] = dataset_path)
@@ -79,11 +89,16 @@ using ProgressMeter
 Flux.testmode!(model)
 @showprogress for (i,(tx, ty)) in enumerate(test_data)
   Flux.reset!(model)
-  p_y = model(tx)
+  p_y = cpu(model(device(tx)))
   pred_y[:,:,:,(i-1)*B+1:i*B,:] .= p_y[:,:,:,:,:]
   test_y[:,:,:,(i-1)*B+1:i*B,:] .= ty[:,:,:,:,:]
   test_x[:,:,:,(i-1)*B+1:i*B,:] .= tx[:,:,:,:,:]
 end
+
+test_y = device(test_y)
+test_x = device(test_x)
+
+pred_y = device(pred_y)
 
 include(srcdir("evaluation", "loss.jl"))
 
@@ -91,11 +106,14 @@ persistence_model = deepcopy(test_y)
 persistence_model[:,:,:,:,:] .= test_x[:,:,:,:,end:end]
 
 for metric in args[:metric]
+  if metric === :f1_threshold
+    global pred_y = cpu(pred_y)
+    global test_y = cpu(test_y)
+  end
   @info "Calculating metric" metric
   metric = get_metric(metric)
 
-  scores = metric(pred_y, test_y)
-  scores_persistence = metric(persistence_model, test_y)
+  scores = cpu(metric(pred_y, test_y))
 
   using Plots
   
@@ -106,8 +124,11 @@ for metric in args[:metric]
   end
 
   p = plot(scores, title=metric, xticks=xs, label="model"; marker=:circle)
-  plot!(scores_persistence, label="persistence"; marker=:circle)
-  
+  if args[:persistence]
+    scores_persistence = cpu(metric(persistence_model, test_y))
+    plot!(scores_persistence, label="persistence"; marker=:circle)
+  end
+
   if args[:clipboard]
     using ImageClipboard
     temp_path, io = mktemp()

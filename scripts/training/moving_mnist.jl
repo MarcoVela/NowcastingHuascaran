@@ -7,10 +7,6 @@ if isnothing(architecture)
   @error "architecture env var must not be empty"
   exit(1)
 end
-if isnothing(optimiser)
-  @error "optimiser env var must not be empty"
-  exit(1)
-end
 const dataset = "moving_mnist"
 
 @info "Including source" architecture dataset optimiser
