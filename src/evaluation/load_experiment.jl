@@ -39,3 +39,17 @@ function parse_best_experiment(folder, metric; suffix="bson", sort)
     return nothing, nothing
   end
 end
+
+function arg_parse_best_experiment(folder, metric; suffix="bson", sort)
+  files = readdir(folder; join=true)
+  filter!(endswith(suffix), files)
+  dics = getindex.(parse_savename.(files), 2)
+  findbest = sort == "min" ? findmin : findmax
+  try
+    _, i = findbest(Base.Fix2(getindex, string(metric)), dics)
+    filename = joinpath(folder, files[i])
+    files[i], parse_experiment(filename)...
+  catch
+    return 0, nothing, nothing
+  end
+end

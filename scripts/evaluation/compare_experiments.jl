@@ -62,6 +62,9 @@ function extract_relevant_fields(metadata)
     opt = Dict(:optimiser_type => get(metadata, :optimiser_type, missing), (Symbol.(:optimiser_, 1:length(metadata[:optimiser])) .=> metadata[:optimiser])...)
   end
   dataset = Dict(Symbol.(:dataset_, keys(metadata[:dataset])) .=> values(metadata[:dataset]))
+  if haskey(metadata, :dataset_path)
+    dataset[:dataset_path] = metadata[:dataset_path]
+  end
   id = get(metadata, :id, missing)
   OrderedDict(
     :id => id,

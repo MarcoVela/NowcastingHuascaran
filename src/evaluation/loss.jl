@@ -1,9 +1,10 @@
 module MyLosses
   import Statistics
   using Flux.Losses
-  using MLJBase: f1score
+  using MLJBase: f1score, accuracy
   using Suppressor
   using OrderedCollections
+  using ThreadTools
 
   function csi(ŷ, y; agg = sum)
     _one = one(eltype(y))
@@ -39,7 +40,8 @@ module MyLosses
   function f1_threshold(ŷ, y, thresholds=.05:.05:.95)
     @suppress begin
       y = y .> 0.9
-      Dict(thresholds .=> [f1score(ŷ .> t, y) for t in thresholds])
+      Dict(thresholds .=> tmap(t -> f1score(ŷ .> t, y), thresholds))
+      # Dict(thresholds .=> [f1score(ŷ .> t, y) for t in thresholds])
     end
   end
 end
