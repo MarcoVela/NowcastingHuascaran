@@ -6,6 +6,9 @@ using Statistics
 using ClimateBase
 using OrderedCollections
 using SplitApplyCombine
+using DrWatson
+
+@quickactivate
 
 include(srcdir("dataset", "l2_lcfa_merge.jl"))
 
@@ -59,6 +62,28 @@ end
 # Receives a list of records, and return a climate array representing the FED
 # It's possible to specify the corners of the grid and both spatial and temporal
 # resolution
+
+"""
+    generate_climarray(records::AbstractVector{FlashRecords},
+                       s::Quantity, 
+                       t::Period;
+                       N=PERU_N,
+                       S=PERU_S,
+                       E=PERU=E,
+                       W=PERU_W)
+Crea un `ClimArray` a partir de los [`FlashRecords`](@ref) recibidos.
+# Argumentos
+- `records` : lista de `FlashRecords` a agrupar
+- `s::Quantity` : resolución espacial del arreglo resultante
+- `t::Period` : resolución temporal del arreglo resultante
+- `N`, `S`, `E`, `W` : bordes para generar la grilla de acumulación de Flashes
+
+# Detalle
+Se calcula el tamaño del arreglo resultante. 
+Una grilla 3D rectangular `Float32` es creada con esquinas definidas por `N`, `S`, `E`, `W` (por defecto los bordes del mapa peruano).
+Se acumula la ocurrencia de Flashes en la grilla, finalmente es transformada en un `ClimArray` con nombre "FED".
+
+"""
 function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
   groups = groupby_floor(records, t)
   groups_keys = collect(keys(groups))
@@ -103,6 +128,10 @@ end
 
 
 # Adapted from https://github.com/JuliaClimate/ClimateBase.jl/blob/35b5e8f85638b7f1d3127b7a446de38afba2c6b6/src/io/netcdf_write.jl#L40
+"""
+    ncwrite_compressed(file::String, Xs; globalattr = Dict(), deflatelevel::Int=1)
+Adaptado de [`ClimateBase.ncwrite`](https://juliaclimate.github.io/ClimateBase.jl/dev/netcdf/#ClimateBase.ncwrite) y permite especificar un nivel de compresión. 
+"""
 function ncwrite_compressed(file::String, Xs; globalattr = Dict(), deflatelevel)
   if any(X -> hasdim(X, Coord), Xs)
     error("""
@@ -135,7 +164,10 @@ function ncwrite_compressed(file::String, X::ClimArray; globalattr = Dict(), def
   ncwrite_compressed(file, (X,); globalattr, deflatelevel)
 end
 
-
+"""
+    read_fed(file::AbstractString)
+Regenera el `ClimArray` producido por [`generate_climarray`](@ref) almacenado en formato HDF5.
+"""
 function read_fed(file)
   fed = ncread(file, "FED")
   lon_dim, lat_dim, time_dim = dims(fed)

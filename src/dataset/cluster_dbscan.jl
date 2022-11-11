@@ -94,8 +94,8 @@ function subarrs_to_plain(climarrs)
   end
   Dict(
     "FED" => out_arr,
-    "lat" => out_lat,
     "lon" => out_lon,
+    "lat" => out_lat,
     "time" => datetime2unix.(out_tim),
   )
 end
@@ -113,7 +113,31 @@ end
                      windows::NTuple{3}=(0,0,0), 
                      threshold::Int=0, 
                      padding::NTuple{3}=(0,0,0))
+Crea un diccionario con los elementos componentes del dataset.
 
+Los argumentos `radius`, `min_neighbors` y `min_cluster_size` son pasados directamente a [`Clustering.dbscan`](https://juliastats.org/Clustering.jl/stable/dbscan.html#Clustering.dbscan).
+# Argumentos
+- `climarr` : `ClimArray` que contiene la data con dimensiones longitud, latitud y tiempo
+- `dimensions` : tupla que representa las dimensiones de los parches de salida
+- `t_scale::AbstractFloat` : factor para multiplicar la dimensión temporal antes de clusterizar
+- `windows::NTuple{3} = (0, 0, 0)` : dimensiones de las ventanas moviles que se aplicarán
+- `threshold::Int = 0` : umbral para la binarización
+- `padding::NTuple{3} = (0, 0, 0)` : tamaño del padding en cada dimensión
+# Detalles
+El argumento `climarr` debe ser un `ClimArray` con 3 dimensiones ordenadas: longitud, latitud y tiempo.
+
+Se aplica clusterización al array `climarr`, usando `dbscan` y tratando a la dimensión `T` como una tercera dimensión espacial escalada con el factor `t_scale`. 
+Se calculan bounding boxes de tamaño `dimensions` para cada cluster obtenido.
+
+Para cada dimensión si el tamaño del cluster es mayor al del bounding box propuesto aplicará una ventana movil en esa dimensión.
+La cantidad de elementos a desplazarse en la dimensión está indicado por `windows`, si este valor es 0, se tomará el límite inferior del cluster. 
+En caso contrario se aplicará `padding` en la dimensión y se obtendrán nuevas bounding boxes de tamaño `dimensions`.
+
+La función `generate_dataset` devolverá un diccionario con 4 entradas:
+- FED : un arreglo de 5 dimensiones (Lon×Lat×1×N×T) donde la 3ra dimensión está vacía por conveniencia
+- lon : una matriz (Lon×N) que almacena la longitud de cada elemento en la grilla
+- lat : una matriz (Lat×N) que almacena la latitud de cada elemento en la grilla
+- time : una matriz (T×N) que almacena el tiempo en segundos desde el unix epoch como `Float64` de cada elemento en la grilla
 """
 function generate_dataset(climarr::AbstractArray{T, N}, dimensions; 
   radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=zero(T), padding=ntuple(_->0, length(dimensions))) where {T, N}

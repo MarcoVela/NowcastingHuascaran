@@ -37,11 +37,11 @@ function evaluate_model(path, evaluation_folder)
   gpu_pred_y = gpu(pred_y)
   xs = 1:size(pred_y, ndims(pred_y))
 
-  csi_por_frame_modelo = MyLosses.csit(gpu_pred_y, gpu_test_y)
+  csi_por_frame_modelo = MyLosses.csit(gpu_pred_y .> .25, gpu_test_y .> .9)
   p = plot(csi_por_frame_modelo, title="CSI promedio por fotograma", xticks=xs; marker=:circle, ylims=(0, 1))
   savefig(p, joinpath(evaluation_path, "csi_modelo.png"))
 
-  csi_por_frame_persistencia = MyLosses.csit(gpu_persistence, gpu_test_y)  
+  csi_por_frame_persistencia = MyLosses.csit(gpu_persistence .> .25, gpu_test_y .> .9)  
   p = plot(csi_por_frame_persistencia, title="CSI promedio por fotograma", xticks=xs; marker=:circle, ylims=(0, 1))
   savefig(p, joinpath(evaluation_path, "csi_persistencia.png"))
 
