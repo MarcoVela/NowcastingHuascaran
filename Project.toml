@@ -1,4 +1,6 @@
 name = "NowcastingHuascaran"
+uuid = "59ebcc7f-bd4d-4d39-9875-55fb2bd032ed"
+version = "0.1.0"
 authors = ["Marco Vela <mvelar@uni.pe>"]
 
 [deps]
