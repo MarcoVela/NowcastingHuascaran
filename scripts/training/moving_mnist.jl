@@ -7,16 +7,12 @@ if isnothing(architecture)
   @error "architecture env var must not be empty"
   exit(1)
 end
-if isnothing(optimiser)
-  @error "optimiser env var must not be empty"
-  exit(1)
-end
 const dataset = "moving_mnist"
 
 @info "Including source" architecture dataset optimiser
 
 include(srcdir("dataset", "$dataset.jl"))
-include(srcdir("models", "$architecture.jl"))
+include(srcdir("architecture", "$architecture.jl"))
 include(srcdir("utils", "logging.jl"))
 include(srcdir("training", "train.jl"))
 include(srcdir("evaluation", "metrics.jl"))
@@ -58,7 +54,7 @@ const device = CUDA.functional(true) ? gpu : cpu
 
 @info "Building model"
 
-const model = build_model(; N_out=TOTAL_FRAMES-N, device=device, dropout=args.dropout)
+model = build_model(; N_out=TOTAL_FRAMES-N, device=device, dropout=args.dropout)
 
 show(stdout, "text/plain", cpu(model))
 println(stdout)
@@ -83,11 +79,14 @@ const logfile = datadir("models",
                      foldername, 
                      "logs.log")
 mkpath(dirname(logfile))
+
+isfile(logfile) && Base.unlink(logfile)
+
 const logger, close_logger = get_logger(logfile)
 
 Base.with_logger(logger) do 
   nt = ntfromstruct(args)
-  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) nt...
+  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) architecture nt...
 end
 
 function log_loss(epoch)
@@ -102,19 +101,12 @@ end
 const ps = params(model)
 const opt = get_opt(args.lr)
 
-@info "Time of first pullback"
-@time Flux.pullback(loss, train_x, train_y);
+@info "Time of first gradient"
+CUDA.@time Flux.gradient(loss, train_x, train_y);
 
 @info "Starting training for $(args.epochs) epochs"
 
-function bestcsi(x, y)
-  thresholds = 0:.05:1
-  y = y .> .8
-  max_csi, i = findmax(thresholds) do t
-    csi(x .> t, y)
-  end
-  (val=max_csi, thrs=thresholds[i])
-end
+metrics = [binarycrossentropy, csi]
 
 for epoch in 1:args.epochs
   log_loss_cb = throttle(() -> log_loss(epoch), args.throttle)
@@ -124,7 +116,6 @@ for epoch in 1:args.epochs
     @info "EPOCH_TRAIN" epoch exec_time=train_time
   end
   @info "Testing..." epoch
-  metrics = [binarycrossentropy, bestcsi]
   Flux.reset!(model)
   metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((device(X), y) for (X,y) in test_data))
   Flux.reset!(model)

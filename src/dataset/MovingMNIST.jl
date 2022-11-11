@@ -1,17 +1,12 @@
 using HDF5
-
-function get_default_evaluation_params()
-  (; N = 12, train_test_ratio=.99, batchsize=1)
-end
+using DrWatson
 
 #WxHxCxNxT
-function get_dataset(; train_test_ratio, batchsize, N)
-  dataset_path = datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5")
-  mnist_whole = h5read(dataset_path, "moving_mnist")
+function get_dataset(; splitratio, batchsize, N, path=datadir("exp_raw", "moving-mnist", "mnist_test_seq.h5"), kwargs...)
+  mnist_whole = h5read(path, "moving_mnist")
   TOTAL_SAMPLES = size(mnist_whole, 4)
-  train_test_split = train_test_ratio
   TOTAL_FRAMES = size(mnist_whole, 5)
-  last_train_sample_index = Int(TOTAL_SAMPLES * train_test_split)
+  last_train_sample_index = Int(TOTAL_SAMPLES * splitratio)
   mnist_train = view(mnist_whole, :, :, :, 1:last_train_sample_index, :)
   mnist_test = view(mnist_whole, :, :, :, last_train_sample_index+1:TOTAL_SAMPLES, :)
 

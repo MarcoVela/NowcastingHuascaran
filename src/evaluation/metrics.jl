@@ -1,41 +1,34 @@
 using Statistics
+using OrderedCollections
 
-function csi_framewise(y_pred, y; threshold = 0.5)
-  cortados = y_pred .> threshold
-  cort_y = y .> .9
-  a = sum(cortados .== cort_y .== 1; dims=(1,2))[:]
-  b = sum((cortados .== 1) .& (cort_y .== 0); dims=(1,2))[:]
-  c = sum((cortados .== 0) .& (cort_y .== 1); dims=(1,2))[:]
-  # d = sum(cortados .== cort_y .== 0; dims=(1,2))[:]
-  @. a / (a + b + c)
+
+function csi(y_pred, y)
+  intersection = sum(y_pred .* y)
+  (intersection + one(eltype(intersection)))/(sum(y_pred) + sum(y) - intersection + one(eltype(intersection)))
 end
 
-function accuracy_framewise(y_pred, y; threshold = 0.5)
-  cortados = y_pred .> threshold
-  cort_y = y .> .9
-  a = sum(cortados .== cort_y .== 1; dims=(1,2))[:]
-  b = sum((cortados .== 1) .& (cort_y .== 0); dims=(1,2))[:]
-  c = sum((cortados .== 0) .& (cort_y .== 1); dims=(1,2))[:]
-  d = sum(cortados .== cort_y .== 0; dims=(1,2))[:]
-  @. (a + d) / (a + b + c + d)
+function true_positive(y_pred, y)
+  return sum(y_pred .* y)
 end
 
-function metric_batch(metric, y_pred_batch, y_batch, threshold)
-  n = size(y_batch, 4)
-  res = zeros(n)
-  for (y_pred, y) in zip(eachslice(y_pred_batch; dims=3), eachslice(y_batch; dims=3))
-    res .+= metric(y_pred, y; threshold)
-  end
-  res ./ n
+function true_negative(y_pred, y)
+  return sum((1 .- y_pred) .* (1 .- y))
 end
 
-csi_batch(y_pred_batch, y_batch, threshold) = metric_batch(csi_framewise, y_pred_batch, y_batch, threshold)
+function false_positive(y_pred, y)
+  sum((y_pred) .* (1 .- y))
+end
 
-accuracy_batch(y_pred_batch, y_batch, threshold) = metric_batch(accuracy_framewise, y_pred_batch, y_batch, threshold)
+function false_negative(y_pred, y)
+  sum((1 .- y_pred) .* (y))
+end
 
-function csi(y_pred::AbstractArray{T}, y::AbstractArray{T}) where {T}
-  a = sum(y_pred .== y .== one(T))
-  b = sum((y_pred .== one(T)) .& (y .== zero(T)))
-  c = sum((y_pred .== zero(T)) .& (y .== one(T)))
-  a / (a + b + c)
+function confmatrix(y_pred, y, thresholds=.05:.05:.95)
+  OrderedDict(
+    :thresholds => thresholds,
+    :TN => [true_negative(y_pred .> t, y) for t in thresholds],
+    :TP => [true_positive(y_pred .> t, y) for t in thresholds],
+    :FN => [false_negative(y_pred .> t, y) for t in thresholds],
+    :FP => [false_positive(y_pred .> t, y) for t in thresholds],
+  )
 end
