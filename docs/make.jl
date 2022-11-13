@@ -14,7 +14,8 @@ makedocs(modules = [NowcastingHuascaran],
         "Tipos" => "lib/types.md",
         "Funciones" => "lib/functions.md",
       ]
-    ])
+    ]
+)
 
 deploydocs(
     repo = "github.com/characat0/NowcastingHuascaran.git",
