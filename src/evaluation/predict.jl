@@ -70,10 +70,16 @@ function join_climarrs(climarrs)
   cat(new_climarr...; dims=1)
 end
 
-function generate_mosaic(folder, T₀, T₁; compression=1, N, S, E, W, device_in, device_out, dimensions, steps)
+using Flux
+function generate_mosaic(folder, model, T₀, T₁; compression=1, N, S, E, W, device_in, device_out, dimensions, steps, batchsize)
   dataset = load_dataset(folder, T₀, T₁; compression, N, S, E, W)
   axs = get_new_axis(dataset; dimensions, steps)
   grids = collect(generate_grids(dataset, axs; dimensions, steps))
-  
-
+  out_grids = similar(grids)
+  for i in Iterators.partition(1:length(grids), batchsize)
+    Flux.reset!(model)
+    out_grids[i] .= predict_climarrs(model, grids[i]; device_in, device_out)
+  end
+  join_climarrs(out_grids)
 end
+
