@@ -76,7 +76,7 @@ function join_climarrs(climarrs)
 end
 
 using Flux
-function generate_mosaic(dataset; device_in, device_out, dimensions, steps, batchsize)
+function generate_mosaic(dataset, model; device_in, device_out, dimensions, steps, batchsize)
   axs = get_new_axis(dataset; dimensions, steps)
   grids = collect(generate_grids(dataset, axs; dimensions, steps))
   out_grids = similar(grids)
