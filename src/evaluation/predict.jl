@@ -13,7 +13,11 @@ function load_dataset(folder, T₀, T₁;compression=1, N, S, E, W)
     ds = read_fed(filepath)
     ds[Lon(W_val..E_val), Lat(S_val..N_val), Ti(T₀..T₁)]
   end
-  cat(datasets...; dims=3) 
+  climarr = cat(datasets...; dims=3)
+  lon, lat, tdim = dims(climarr)
+  orig_step = step(dims(datasets[begin], 3))
+  new_tdim = Ti(first(tdim):orig_step:last(tdim); metadata=tdim.val.metadata)
+  ClimArray(climarr.data, (lon, lat, new_tdim))
 end
 
 # Funcion para calcular windows
@@ -45,7 +49,7 @@ end
 
 # Correr modelo para todos los climarrs
 function predict_climarrs(model, climarrs; device_in, device_out)
-  lon, lat, tim = size(climarr[begin])
+  lon, lat, tim = size(climarrs[begin])
   N = length(climarrs)
   out_arr = similar(climarrs)
   ds_in = Array{eltype(climarrs[1]), 5}(undef, lon, lat, 1, N, tim)
@@ -54,9 +58,10 @@ function predict_climarrs(model, climarrs; device_in, device_out)
   end
   ds_out = device_out(model(device_in(ds_in)))
   tim_out = size(ds_out, 5)
-  dim_tim_out = Ti((last(tim) + step(tim)):step(tim):(last(tim) + step(tim) * tim_out))
   for i in axes(ds_out, 4)
-    out_arr[i] = ClimArray(ds_out[:,:,1,i,:], (lon, lat, dim_tim_out); attrib=Dict{String,String}())
+    londim, latdim, tdim = dims(climarrs[i])
+    dim_tim_out = Ti((last(tdim) + step(tdim)):step(tdim):(last(tdim) + step(tdim) * tim_out); metadata=tdim.val.metadata)
+    out_arr[i] = ClimArray(ds_out[:,:,1,i,:], (londim, latdim, dim_tim_out))
   end
   out_arr
 end
@@ -71,8 +76,7 @@ function join_climarrs(climarrs)
 end
 
 using Flux
-function generate_mosaic(folder, model, T₀, T₁; compression=1, N, S, E, W, device_in, device_out, dimensions, steps, batchsize)
-  dataset = load_dataset(folder, T₀, T₁; compression, N, S, E, W)
+function generate_mosaic(dataset; device_in, device_out, dimensions, steps, batchsize)
   axs = get_new_axis(dataset; dimensions, steps)
   grids = collect(generate_grids(dataset, axs; dimensions, steps))
   out_grids = similar(grids)
