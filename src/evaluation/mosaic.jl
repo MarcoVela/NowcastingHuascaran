@@ -76,6 +76,7 @@ function join_climarrs(climarrs)
 end
 
 using Flux
+
 function generate_mosaic(dataset, model; device_in, device_out, dimensions, steps, batchsize)
   axs = get_new_axis(dataset; dimensions, steps)
   grids = collect(generate_grids(dataset, axs; dimensions, steps))
@@ -85,5 +86,48 @@ function generate_mosaic(dataset, model; device_in, device_out, dimensions, step
     out_grids[i] .= predict_climarrs(model, grids[i]; device_in, device_out)
   end
   join_climarrs(out_grids)
+end
+
+using GMT
+
+function plot_mosaic(climarr, figname=tempname()*".png"; loadfig=true)
+  lon = dims(climarr, Lon)
+  lat = dims(climarr, Lat)
+  region = [minimum(lon), maximum(lon), minimum(lat), maximum(lat)]
+  coast = (;DCW=((country=:PE,pen=(0.5,:white)), (continent=:SA, pen=(.5, :white))), region=region)
+  topo = makecpt(color=(:yellow, :red), range=(1, 1.1), continuous=false)
+  G2 = mat2grid(climarr.data', x=Float64.(lon.val), y=Float64.(lat.val))
+  basemap(R=region, proj=:guess, show=false)
+  grdimage!(G2; color=topo, colorbar=true, coast=coast, show=false, savefig=figname, fmt=:png)
+  loadfig && load(figname)
+end
+
+function plot_single_image_factory(climarr)
+  lon = dims(climarr, Lon)
+  lat = dims(climarr, Lat)
+  region = [minimum(lon), maximum(lon), minimum(lat), maximum(lat)]
+  coast = (;DCW=((country=:PE,pen=(0.5,:white)), (continent=:SA, pen=(.5, :white))), region=region)
+  function ()
+    topo = makecpt(color=(:yellow, :red), range=(1, 1.1), continuous=false)
+    basemap(R=region, proj=:guess, show=false, compass=true)
+    grdimage!("MOVIE_FRAME"; color=topo, colorbar=true, coast=coast, show=false, fmt=:png)
+  end
+end
+
+function animate_mosaic(climarr, filename)
+  lon = Float64.(dims(climarr, Lon))
+  lat = Float64.(dims(climarr, Lat))
+  tim = dims(climarr, Ti)
+  region = [minimum(lon), maximum(lon), minimum(lat), maximum(lat)]
+  coast = (;DCW=((country=:PE,pen=(0.5,:white)), (continent=:SA, pen=(.5, :white))), region=region)
+  topo = makecpt(color=(:yellow, :red), range=(.99, 1.01), continuous=false)
+  figures = map(tim) do t
+    G2 = mat2grid(climarr[Ti(At(t))].data', x=lon, y=lat)
+    figname=tempname()*".png"
+    basemap(R=region, proj=:guess, show=false)
+    grdimage!(G2; color=topo, colorbar=true, coast=coast, show=false, savefig=figname, fmt=:png)
+    load(figname)
+  end
+  save(filename, cat(figures...; dims=Val(3)))
 end
 
