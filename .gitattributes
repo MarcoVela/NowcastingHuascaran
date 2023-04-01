@@ -194,3 +194,4 @@ bin/	binary
 # papers
 papers/** linguist-vendored
 *.bson filter=lfs diff=lfs merge=lfs -text
+data/exp_pro/GLM-L2-LCFA-GRID/** filter=lfs diff=lfs merge=lfs -text

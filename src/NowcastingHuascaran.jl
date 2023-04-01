@@ -7,5 +7,6 @@ include("structs/FlashRecords.jl")
 
 export generate_dataset
 export read_fed
+export FlashRecords
 
 end

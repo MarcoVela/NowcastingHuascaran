@@ -170,9 +170,9 @@ Regenera el `ClimArray` producido por [`generate_climarray`](@ref) almacenado en
 """
 function read_fed(file)
   fed = ncread(file, "FED")
-  lon_dim, lat_dim, time_dim = dims(fed)
+  lon_dim, lat_dim, time_dim = [x.val for x in dims(fed)]
   min_step = Minute(pop!(time_dim.metadata, "original_step_minutes")::Int32)
-  time_range = minimum(time_dim.val):min_step:maximum(time_dim.val)
+  time_range = minimum(time_dim):min_step:maximum(time_dim)
   time_dim2 = Ti(time_range; metadata=time_dim.metadata)
   original_lon_range = pop!(lon_dim.metadata, "original_range")
   #lon_dim2 = Lon(original_lon_range[1]:original_lon_range[2]:original_lon_range[3]; metadata=lon_dim.metadata)

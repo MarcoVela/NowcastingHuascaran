@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = NowcastingHuascaran
+```
+
 # Tipos
 ```@index
 Pages = ["types.md"]
