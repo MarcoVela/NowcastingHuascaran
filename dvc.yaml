@@ -3,12 +3,27 @@ vars:
       year: '2020'
 
 stages:
-  merge_lcfa:
-    cmd: julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/${dataset.year}
+  merge_lcfa_2019:
+    cmd: 
+      - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2019
     deps:
       - scripts/dataset/merge_lcfa.jl
       - src/dataset/l2_lcfa_merge.jl
       - src/structs/FlashRecords.jl
     outs:
-      - data/exp_pro/GLM-L2-LCFA/${dataset.year}.jld2:
+      - data/exp_pro/GLM-L2-LCFA/2019.jld2:
           persist: true
+          cache: true
+
+  merge_lcfa_2020:
+    cmd: 
+      - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2020
+    deps:
+      - scripts/dataset/merge_lcfa.jl
+      - src/dataset/l2_lcfa_merge.jl
+      - src/structs/FlashRecords.jl
+    outs:
+      - data/exp_pro/GLM-L2-LCFA/2020.jld2:
+          persist: true
+          cache: true
+
