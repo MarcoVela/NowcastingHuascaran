@@ -1,7 +1,7 @@
 using Flux
 function build_model(; device, kwargs...)
   lrelu = Base.Fix2(leakyrelu, 0.2f0)
-  _model, Chain(
+  _model = Chain(
     Chain(
       Conv((3,3),  1=>64, lrelu, pad=SamePad()),
       Conv((3,3), 64=>64, lrelu, pad=SamePad()),

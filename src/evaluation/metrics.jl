@@ -23,6 +23,18 @@ function false_negative(y_pred, y)
   sum((1 .- y_pred) .* (y))
 end
 
+function precision(y_pred, y)
+  tp = true_positive(y_pred, y)
+  fp = false_positive(y_pred, y)
+  tp ./ (tp .+ fp)
+end
+
+function recall(y_pred, y)
+  tp = true_positive(y_pred, y)
+  fn = false_negative(y_pred, y)
+  tp ./ (tp .+ fn)
+end
+
 function confmatrix(y_pred, y, thresholds=.05:.05:.95)
   OrderedDict(
     :thresholds => thresholds,

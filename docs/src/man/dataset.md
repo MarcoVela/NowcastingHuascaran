@@ -1,4 +1,4 @@
-# Dataset
+# Generación de Conjuntos de Datos
 
 Para entrenar los modelos se utiliza un proceso de generación de Datasets.
 Este proceso consiste en grillar los datos obtenidos con cierta resolución espacial y temporal. 
