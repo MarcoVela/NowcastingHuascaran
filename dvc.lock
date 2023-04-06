@@ -36,3 +36,21 @@ stages:
       md5: d84ac85255a2bcf85eed8f91583af5d9
       size: 6762022226
       isexec: true
+  merge_lcfa_2021:
+    cmd:
+    - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2021
+    deps:
+    - path: scripts/dataset/merge_lcfa.jl
+      md5: b85bf2fa77d5aed5bce3556dc2a58cbf
+      size: 377
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    - path: src/structs/FlashRecords.jl
+      md5: d70788ccd28818f30f0309d419dab1ea
+      size: 1580
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA/2021.jld2
+      md5: 08250d1028c96b60ee8211df5af1ec66
+      size: 6905111344
+      isexec: true

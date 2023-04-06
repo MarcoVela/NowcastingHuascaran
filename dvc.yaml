@@ -27,3 +27,15 @@ stages:
           persist: true
           cache: true
 
+  merge_lcfa_2021:
+    cmd: 
+      - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2021
+    deps:
+      - scripts/dataset/merge_lcfa.jl
+      - src/dataset/l2_lcfa_merge.jl
+      - src/structs/FlashRecords.jl
+    outs:
+      - data/exp_pro/GLM-L2-LCFA/2021.jld2:
+          persist: true
+          cache: true
+
