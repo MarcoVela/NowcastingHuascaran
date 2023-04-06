@@ -1,0 +1,4 @@
+ds:
+  resolution:
+    spatial: 4
+    temporal: 15

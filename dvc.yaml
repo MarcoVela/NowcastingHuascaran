@@ -39,3 +39,21 @@ stages:
           persist: true
           cache: true
 
+  grid_dataset:
+    cmd:
+      - julia scripts/dataset/grid_fed.jl -s ${ds.resolution.spatial} -t ${ds.resolution.temporal} -f data/exp_pro/GLM-L2-LCFA/${dataset.year}.jld2
+    deps:
+      - scripts/dataset/grid_fed.jl
+      - src/dataset/fed_grid.jl
+      - src/dataset/l2_lcfa_merge.jl
+      - data/exp_pro/GLM-L2-LCFA/2019.jld2
+      - data/exp_pro/GLM-L2-LCFA/2020.jld2
+      - data/exp_pro/GLM-L2-LCFA/2021.jld2
+    outs:
+      - data/exp_pro/GLM-L2-LCFA-GRID/spatial=${ds.resolution.spatial}_temporal=${ds.resolution.temporal}_year=${dataset.year}:
+          persist: true
+          cache: true
+    params:
+      - ds.resolution.spatial
+      - ds.resolution.temporal
+

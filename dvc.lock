@@ -54,3 +54,34 @@ stages:
       md5: 08250d1028c96b60ee8211df5af1ec66
       size: 6905111344
       isexec: true
+  grid_dataset:
+    cmd:
+    - julia scripts/dataset/grid_fed.jl -s 4 -t 15 -f data/exp_pro/GLM-L2-LCFA/2020.jld2
+    deps:
+    - path: data/exp_pro/GLM-L2-LCFA/2019.jld2
+      md5: 05df9a0f68dc2b8b6c5138baea609f34
+      size: 7893048977
+    - path: data/exp_pro/GLM-L2-LCFA/2020.jld2
+      md5: d84ac85255a2bcf85eed8f91583af5d9
+      size: 6762022226
+    - path: data/exp_pro/GLM-L2-LCFA/2021.jld2
+      md5: 08250d1028c96b60ee8211df5af1ec66
+      size: 6905111344
+    - path: scripts/dataset/grid_fed.jl
+      md5: bf4ee32aad228f41931bdf3e183b9406
+      size: 2937
+    - path: src/dataset/fed_grid.jl
+      md5: e2ea8d10b6b6ae4fe86c679d450cfb4f
+      size: 7615
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    params:
+      params.yaml:
+        ds.resolution.spatial: 4
+        ds.resolution.temporal: 15
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2020
+      md5: 330cca3e91337bb8451c073040a3896b.dir
+      size: 160633015
+      nfiles: 12
