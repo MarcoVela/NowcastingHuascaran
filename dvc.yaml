@@ -1,6 +1,6 @@
 vars:
   - dataset:
-      year: '2020'
+      year: '2019'
 
 stages:
   merge_lcfa_2019:

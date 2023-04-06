@@ -56,7 +56,7 @@ stages:
       isexec: true
   grid_dataset:
     cmd:
-    - julia scripts/dataset/grid_fed.jl -s 4 -t 15 -f data/exp_pro/GLM-L2-LCFA/2020.jld2
+    - julia scripts/dataset/grid_fed.jl -s 4 -t 15 -f data/exp_pro/GLM-L2-LCFA/2019.jld2
     deps:
     - path: data/exp_pro/GLM-L2-LCFA/2019.jld2
       md5: 05df9a0f68dc2b8b6c5138baea609f34
@@ -81,7 +81,7 @@ stages:
         ds.resolution.spatial: 4
         ds.resolution.temporal: 15
     outs:
-    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2020
-      md5: 330cca3e91337bb8451c073040a3896b.dir
-      size: 160633015
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2019
+      md5: c60f6f4c452b865c01cd65dc3d3bfb5a.dir
+      size: 160524600
       nfiles: 12
