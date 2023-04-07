@@ -54,6 +54,49 @@ stages:
           persist: true
           cache: true
     params:
-      - ds.resolution.spatial
-      - ds.resolution.temporal
+      - ds.resolution
+
+  cluster_dataset:
+    cmd:
+      - julia scripts/dataset/cluster_grid.jl
+        --folder=data/exp_pro/GLM-L2-LCFA-GRID/spatial=${ds.resolution.spatial}_temporal=${ds.resolution.temporal}_year=${dataset.year}
+        --threshold=${ds.cluster.threshold}
+        --binary
+        --radius=${ds.cluster.radius}
+        --time_scale=${ds.cluster.t_scale}
+        --windows=${ds.cluster.windows}
+        --min_neighbors=${ds.cluster.min_neighbors}
+        --min_cluster_size=${ds.cluster.min_cluster_size}
+        --dimensions=${ds.cluster.dimensions}
+        --padding=${ds.cluster.padding}
+        --single-file=dataset.h5
+    deps:
+      - scripts/dataset/cluster_grid.jl
+      - src/dataset/fed_grid.jl
+      - src/dataset/cluster_dbscan.jl
+      - data/exp_pro/GLM-L2-LCFA-GRID/spatial=${ds.resolution.spatial}_temporal=${ds.resolution.temporal}_year=${dataset.year}
+    outs:
+      - data/training/dataset.h5:
+          persist: true
+          cache: true
+    params:
+      - ds.resolution
+      - ds.cluster
+
+  train:
+    cmd:
+      - julia scripts/training/train.jl
+        --dataset=type=MovingMNIST_splitratio=0.8_batchsize=16_N=10
+        --architecture=type=EncoderForecaster05.2.2_out=10_dropout=.25
+        --optimiser=type=RMSProp_lr=.0003
+        --epochs=100
+        --loss=binarycrossentropy
+        --metrics=mse,csi,binarycrossentropy
+        --device=gpu
+        --early_stop=30
+        --plateau=30
+        --throttle=120
+
+
+
 

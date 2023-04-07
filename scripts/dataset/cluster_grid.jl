@@ -62,6 +62,10 @@ end
     arg_type = NTuple{3, Int}
     default = (0, 0, 0)
     range_tester = t -> all(>=(0), t)
+  "--single-file"
+    help = "File to output"
+    arg_type = Union{String, Nothing}
+    default = nothing
 end
 
 parsed_args = parse_args(ARGS, s; as_symbols=true)
@@ -77,27 +81,44 @@ end
 
 using HDF5
 
+function join_all(folder, fname)
+  files = readdir(folder; join=true)
+  ds = Dict()
+  FED = [h5read(f, "FED") for f in files]
+  lon = [h5read(f, "lon") for f in files]
+  lat = [h5read(f, "lat") for f in files]
+  time = [h5read(f, "time") for f in files]
+  ds["FED"] = cat(FED...; dims=4)
+  ds["lon"] = cat(lon...; dims=2)
+  ds["lat"] = cat(lat...; dims=2)
+  ds["time"] = cat(time...; dims=2)
+  h5open(fname, "w") do file
+    for (key, val) in ds
+      file[key, deflate=parsed_args[:compression]] = val
+    end
+  end
+end
+
+
 include(srcdir("dataset", "fed_grid.jl"))
 include(srcdir("dataset", "cluster_dbscan.jl"))
 
+_, input_folder_params, _ = parse_savename(parsed_args[:folder])
+experiment_id = savename((; 
+binary=parsed_args[:binary],
+spatial=input_folder_params["spatial"],
+temporal=input_folder_params["temporal"],
+threshold=parsed_args[:threshold],
+radius=parsed_args[:radius], 
+min_neighbors=parsed_args[:min_neighbors], 
+min_cluster_size=parsed_args[:min_cluster_size],
+t_scale=parsed_args[:time_scale],
+windows=parsed_args[:windows],
+dimensions=parsed_args[:dimensions],
+padding=parsed_args[:padding],
+), sort=false, allowedtypes=[Any])
 
 for file in files
-  _, input_folder_params, _ = parse_savename(dirname(file))
-
-  experiment_id = savename((; 
-    binary=parsed_args[:binary],
-    spatial=input_folder_params["spatial"],
-    temporal=input_folder_params["temporal"],
-    threshold=parsed_args[:threshold],
-    radius=parsed_args[:radius], 
-    min_neighbors=parsed_args[:min_neighbors], 
-    min_cluster_size=parsed_args[:min_cluster_size],
-    t_scale=parsed_args[:time_scale],
-    windows=parsed_args[:windows],
-    dimensions=parsed_args[:dimensions],
-    padding=parsed_args[:padding],
-  ), sort=false, allowedtypes=[Any])
-  
   parent_folder = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id)
   mkpath(parent_folder)
   
@@ -118,8 +139,8 @@ for file in files
     continue
   end
   _, instance_id, _ = parse_savename(file)
-  
-  instance_id = (; basename=instance_id["basename"], month=instance_id["month"], compression=parsed_args[:compression])
+  _, instance_folder_id, _ = parse_savename(dirname(file))
+  instance_id = (; basename=instance_folder_id["year"], month=instance_id["month"], compression=parsed_args[:compression])
   
   filepath = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id, savename(instance_id, "h5"; sort=false))
   threshold = parsed_args[:threshold]
@@ -134,5 +155,12 @@ for file in files
   end
 end
 
+if !isnothing(parsed_args[Symbol("single-file")])
+  folder_path = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id)
+  @info "joining into single file"
+  p = joinpath("data/training", parsed_args[Symbol("single-file")])
+  mkpath(dirname(p))
+  join_all(folder_path, p)
+end
 
 

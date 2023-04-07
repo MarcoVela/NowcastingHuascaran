@@ -2,3 +2,30 @@ ds:
   resolution:
     spatial: 4
     temporal: 15
+  cluster:
+    threshold: 1.0
+    radius: 3.0
+    min_neighbors: 50
+    min_cluster_size: 100
+    t_scale: 2.0
+    windows: 5,5,10
+    dimensions: 64,64,20
+    padding: 2,2,4
+training:
+  dataset:
+    type: SequenceFED
+    splitratio: 0.8
+    batchsize: 16
+    N: 10
+  architecture:
+    type: EncoderForecaster05.2.2
+    out: 10
+    dropout: 0.25
+  optimiser:
+    type: RMSProp
+    lr: 0.0003
+  epochs: 100
+  loss: binarycrossentropy
+  
+
+
