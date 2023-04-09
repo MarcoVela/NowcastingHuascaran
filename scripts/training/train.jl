@@ -184,7 +184,7 @@ test_losses = Vector{Float32}()
 c = gitdescribe(projectdir())
 
 logfile = datadir("experiments", experiment_name, "logs.log")
-ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
+ispath(dirname(logfile)) && Base.rm(dirname(logfile); recursive=true)
 mkpath(dirname(logfile))
 isfile(logfile) && Base.unlink(logfile)
 logger, close_logger = get_logger(logfile)
