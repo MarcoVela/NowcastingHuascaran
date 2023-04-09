@@ -11,19 +11,17 @@ ds:
     windows: 5,5,10
     dimensions: 64,64,20
     padding: 2,2,4
-training:
-  dataset:
+train:
+  ds: # Dataset
     type: SequenceFED
     splitratio: 0.8
-    batchsize: 16
+    batchsize: 8
     N: 10
-  architecture:
+  arch: # Architecture
     type: EncoderForecaster05.2.2
     out: 10
     dropout: 0.25
-  optimiser:
-    type: RMSProp
-    lr: 0.0003
+  optimiser: RMSProp(0.0003)
   epochs: 100
   loss: binarycrossentropy
   

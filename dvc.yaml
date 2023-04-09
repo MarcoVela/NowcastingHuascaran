@@ -1,6 +1,8 @@
 vars:
   - dataset:
       year: '2019'
+  - mlflow:
+      experiment_name: '009c5bf8-d64e-11ed-b559-5fd17839084d'
 
 stages:
   merge_lcfa_2019:
@@ -85,18 +87,30 @@ stages:
 
   train:
     cmd:
-      - julia scripts/training/train.jl
-        --dataset=type=MovingMNIST_splitratio=0.8_batchsize=16_N=10
-        --architecture=type=EncoderForecaster05.2.2_out=10_dropout=.25
-        --optimiser=type=RMSProp_lr=.0003
-        --epochs=100
-        --loss=binarycrossentropy
+      - MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} julia scripts/training/train.jl
+        --dataset=type=${train.ds.type}_splitratio=${train.ds.splitratio}_batchsize=${train.ds.batchsize}_N=${train.ds.N}
+        --architecture=type=${train.arch.type}_out=${train.arch.out}_dropout=${train.arch.dropout}
+        --optimiser="${train.optimiser}"
+        --epochs=${train.epochs}
+        --loss=${train.loss}
         --metrics=mse,csi,binarycrossentropy
         --device=gpu
-        --early_stop=30
-        --plateau=30
+        --early_stop=10
+        --plateau=10
         --throttle=120
 
-
-
+    deps:
+      - scripts/training/train.jl
+      - src/dataset/${train.ds.type}.jl
+      - src/architecture/${train.arch.type}.jl
+      - src/optimisers/optimiser.jl
+      - src/utils/logging.jl
+      - src/training/train.jl
+      - src/evaluation/loss.jl
+      - data/training/dataset.h5
+    outs:
+      - data/models/${mlflow.experiment_name}:
+          persist: true
+    params:
+      - train
 
