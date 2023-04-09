@@ -124,3 +124,55 @@ stages:
       md5: 52537a136ef89e8e16d9f6aa16806390
       size: 26338541
       isexec: true
+  train:
+    cmd:
+    - MLFLOW_EXPERIMENT_NAME=009c5bf8-d64e-11ed-b559-5fd17839084d julia scripts/training/train.jl
+      --dataset=type=SequenceFED_splitratio=0.8_batchsize=8_N=10 --dataset_path=data/training/dataset.h5
+      --architecture=type=EncoderForecaster05.2.2_out=10_dropout=0.25 --optimiser="RMSProp(0.0003)"
+      --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
+      --device=gpu --early_stop=10 --plateau=10 --throttle=120
+    deps:
+    - path: data/training/dataset.h5
+      md5: 52537a136ef89e8e16d9f6aa16806390
+      size: 26338541
+    - path: scripts/training/train.jl
+      md5: fa2461df9c2b7048b94abeec6e14025f
+      size: 8733
+    - path: src/architecture/EncoderForecaster05.2.2.jl
+      md5: d80681ca1f5dc1f8f126c92886b29424
+      size: 2316
+    - path: src/dataset/SequenceFED.jl
+      md5: 410f5a20e06120f60625f4d2c1dc3539
+      size: 1403
+    - path: src/evaluation/loss.jl
+      md5: 44c5c90e4f6e5e8afc00fcaf567e995e
+      size: 1323
+    - path: src/optimisers/optimiser.jl
+      md5: a393d6a9f15f5c075daca9ae110e46b4
+      size: 1111
+    - path: src/training/train.jl
+      md5: 4e687e0eb5abc60e4e74e65ffbf9a5fc
+      size: 2026
+    - path: src/utils/logging.jl
+      md5: 91de169a342a78e4eb8f406f2d9fc2e1
+      size: 868
+    params:
+      params.yaml:
+        train:
+          ds:
+            type: SequenceFED
+            splitratio: 0.8
+            batchsize: 8
+            N: 10
+          arch:
+            type: EncoderForecaster05.2.2
+            out: 10
+            dropout: 0.25
+          optimiser: RMSProp(0.0003)
+          epochs: 100
+          loss: binarycrossentropy
+    outs:
+    - path: data/experiments/009c5bf8-d64e-11ed-b559-5fd17839084d
+      md5: e8b2acb103ae9bd03d1278c05007d9ed.dir
+      size: 269067320
+      nfiles: 18

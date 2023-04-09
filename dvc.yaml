@@ -110,7 +110,7 @@ stages:
       - src/evaluation/loss.jl
       - data/training/dataset.h5
     outs:
-      - data/models/${mlflow.experiment_name}:
+      - data/experiments/${mlflow.experiment_name}:
           persist: true
     params:
       - train

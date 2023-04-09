@@ -183,7 +183,7 @@ test_losses = Vector{Float32}()
 
 c = gitdescribe(projectdir())
 
-logfile = datadir("models", experiment_name, "logs.log")
+logfile = datadir("experiments", experiment_name, "logs.log")
 ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
 mkpath(dirname(logfile))
 isfile(logfile) && Base.unlink(logfile)
@@ -265,7 +265,7 @@ createrun(mlf, experiment; tags=[Dict("key"=>"mlflow.source.git.commit", "value"
   
     iteration_id = savename((; epoch), "bson"; digits=5, sort=false)
   
-    filename = datadir("models", experiment_name, iteration_id)
+    filename = datadir("experiments", experiment_name, iteration_id)
     safesave(filename, args_dict)
     logartifact(mlf, active_run, filename)
 
