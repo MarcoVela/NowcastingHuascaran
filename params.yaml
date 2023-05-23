@@ -25,6 +25,6 @@ train:
   epochs: 100
   loss: logcsi
 gpu:
-  CUDA_AVAILABLE_DEVICES: 0
+  CUDA_VISIBLE_DEVICES: 0
 
 
