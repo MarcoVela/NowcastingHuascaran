@@ -10,7 +10,9 @@
 		"ghcr.io/julialang/devcontainer-features/julia:1": {
 			"channel": "release"
 		},
-		"ghcr.io/devcontainers/features/conda:1": {}
+		"ghcr.io/devcontainers/features/conda:1": {},
+		"ghcr.io/iterative/features/dvc:1": {},
+		"ghcr.io/iterative/features/nvtop:1": {}
 	},
 	"runArgs": [
 		"--gpus",
@@ -18,7 +20,11 @@
 	],
 	"containerEnv": {
 		"JULIA_NUM_THREADS": "auto"
-	}
+	},
+	"mounts": [
+		"type=volume,src=julia-depot,dst=/home/vscode/.julia",
+		"type=bind,src=${localEnv:HOME}/.aws,dst=/home/vscode/.aws"
+	],
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -27,7 +33,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
+	"postCreateCommand": "julia -e 'import Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile()'"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
