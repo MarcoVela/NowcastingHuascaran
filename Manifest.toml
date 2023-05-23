@@ -717,6 +717,11 @@ git-tree-sha1 = "e27c4ebe80e8699540f2d6c805cc12203b614f12"
 uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
 version = "0.9.20"
 
+[[deps.FileTypes]]
+git-tree-sha1 = "466e118cc307b08a0e4da74b374a3d5c334912f8"
+uuid = "b58e86d0-4a47-4fce-a54d-8006a143ed90"
+version = "0.1.0"
+
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
@@ -1514,8 +1519,8 @@ uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2022.2.0+0"
 
 [[deps.MLFlowClient]]
-deps = ["Dates", "FilePathsBase", "HTTP", "JSON", "ShowCases", "URIs", "UUIDs"]
-git-tree-sha1 = "5cd2a2a87af9a096ed9089b00c9d611c43384f9e"
+deps = ["Dates", "FilePathsBase", "FileTypes", "HTTP", "JSON", "ShowCases", "URIs", "UUIDs"]
+git-tree-sha1 = "4bebd57605ff3ad4fc56412a5fde69485b6ef501"
 repo-rev = "main"
 repo-url = "https://github.com/characat0/MLFlowClient.jl.git"
 uuid = "64a0f543-368b-4a9a-827a-e71edb2a0b83"
