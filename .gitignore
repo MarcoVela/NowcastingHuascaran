@@ -35,8 +35,6 @@ deps/src/
 docs/build/
 docs/site/
 
-# Generated Manifest
-Manifest.toml
 
 ################################################################################
 #                               Jupyter Notebook                               #
