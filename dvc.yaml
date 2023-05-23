@@ -3,6 +3,8 @@ vars:
       year: '2019'
   - mlflow:
       experiment_name: '009c5bf8-d64e-11ed-b559-5fd17839084d'
+  - gpu:
+      CUDA_VISIBLE_DEVICES: 0
 
 stages:
   merge_lcfa_2019:
