@@ -1,7 +1,7 @@
 using DrWatson
 @quickactivate
 
-isdirty() && error("Dirty repo, commit changes to continue")
+isdirty() && @warn "Dirty repo, commit changes to continue"
 
 using ArgParse
 
