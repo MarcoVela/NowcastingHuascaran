@@ -87,7 +87,9 @@ stages:
 
   train:
     cmd:
-      - export $(xargs .env) MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} julia scripts/training/train.jl
+      - export $(xargs .env) MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} 
+        CUDA_VISIBLE_DEVICES=${gpu.CUDA_VISIBLE_DEVICES}
+        julia scripts/training/train.jl
         --dataset=type=${train.ds.type}_splitratio=${train.ds.splitratio}_batchsize=${train.ds.batchsize}_N=${train.ds.N}
         --dataset_path=data/training/dataset.h5
         --architecture=type=${train.arch.type}_out=${train.arch.out}_dropout=${train.arch.dropout}

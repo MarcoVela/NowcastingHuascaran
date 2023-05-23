@@ -24,6 +24,7 @@ train:
   optimiser: RMSProp(0.0003)
   epochs: 100
   loss: logcsi
-  
+gpu:
+  CUDA_AVAILABLE_DEVICES: 0
 
 
