@@ -23,6 +23,6 @@ train:
     dropout: 0.25
   optimiser: RMSProp(0.0003)
   epochs: 100
-  loss: logcsi
+  loss: binarycrossentropy
 
 

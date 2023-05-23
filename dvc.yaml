@@ -4,7 +4,7 @@ vars:
   - mlflow:
       experiment_name: '009c5bf8-d64e-11ed-b559-5fd17839084d'
   - gpu:
-      CUDA_VISIBLE_DEVICES: 0
+      CUDA_VISIBLE_DEVICES: 1
 
 stages:
   merge_lcfa_2019:
@@ -89,7 +89,7 @@ stages:
 
   train:
     cmd:
-      - MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} 
+      - export $(xargs < .env) MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} 
         CUDA_VISIBLE_DEVICES=${gpu.CUDA_VISIBLE_DEVICES}
         julia scripts/training/train.jl
         --dataset=type=${train.ds.type}_splitratio=${train.ds.splitratio}_batchsize=${train.ds.batchsize}_N=${train.ds.N}
