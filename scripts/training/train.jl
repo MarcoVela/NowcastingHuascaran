@@ -142,14 +142,6 @@ const loss_f = get_metric(args[:loss])
 
 CUDA.functional(args[:device] == :gpu)
 const accel_device = args[:device] == :gpu ? gpu : cpu
-if args[:device] == :gpu && Base._hasenv("CUDA_VISIBLE_DEVICES")
-  devices_id = split(ENV["CUDA_VISIBLE_DEVICES"], ',')
-  device_to_run = parse(Int, first(devices_id))
-  if length(devices_id) > 0
-    @warn "Specified $(devices_id), but using only $(device_to_run)"
-  end
-  CUDA.device!(device_to_run)
-end
 
 @info "Building model"
 if !isnothing(args[:base_model])
