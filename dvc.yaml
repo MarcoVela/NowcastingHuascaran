@@ -2,9 +2,9 @@ vars:
   - dataset:
       year: '2019'
   - mlflow:
-      experiment_name: '009c5bf8-d64e-11ed-b559-5fd17839084d'
+      experiment_name: '4x4x30-resolution'
   - gpu:
-      CUDA_VISIBLE_DEVICES: 1
+      CUDA_VISIBLE_DEVICES: 0
 
 stages:
   merge_lcfa_2019:
@@ -80,7 +80,7 @@ stages:
       - src/dataset/cluster_dbscan.jl
       - data/exp_pro/GLM-L2-LCFA-GRID/spatial=${ds.resolution.spatial}_temporal=${ds.resolution.temporal}_year=${dataset.year}
     outs:
-      - data/training/dataset.h5:
+      - data/training/dataset-${ds.resolution.spatial}x${ds.resolution.spatial}x${ds.resolution.temporal}.h5:
           persist: true
           cache: true
     params:

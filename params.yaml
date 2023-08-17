@@ -20,8 +20,8 @@ train:
   arch: # Architecture
     type: EncoderForecaster05.2.2
     out: 10
-    dropout: 0.25
-  optimiser: ADAMExpDecay(; lr=0.03, decay=0.1, decaystep=5000)
+    dropout: 0.2
+  optimiser: ADAM(; lr=3e-4)
   epochs: 100
   loss: binarycrossentropy
 

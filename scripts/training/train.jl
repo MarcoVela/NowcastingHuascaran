@@ -210,6 +210,10 @@ createrun(mlf, experiment; tags=[Dict("key"=>"mlflow.source.git.commit", "value"
     original_args...
   ))
 
+  if !isnothing(dataset_path)
+    logartifact(mlf, active_run, dataset_path)
+  end
+
   Base.with_logger(logger) do 
     @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
   end
@@ -261,8 +265,7 @@ createrun(mlf, experiment; tags=[Dict("key"=>"mlflow.source.git.commit", "value"
     args_dict[:dataset][:type] = dataset_type
     args_dict[:optimiser_type] = optimiser_type
     args_dict[:id] = exp_id
-    @tag!(args_dict, storepatch=true)
-  
+    @tag!(args_dict)
     iteration_id = savename((; epoch), "bson"; digits=5, sort=false)
   
     filename = datadir("experiments", experiment_name, iteration_id)

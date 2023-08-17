@@ -118,12 +118,15 @@ dimensions=parsed_args[:dimensions],
 padding=parsed_args[:padding],
 ), sort=false, allowedtypes=[Any])
 
+@info "Starting processing"
 for file in files
   parent_folder = datadir("exp_pro", "GLM-L2-LCFA-BOXES", experiment_id)
   mkpath(parent_folder)
-  
+
+  @info "Read file $(file)"
   climarr = read_fed(file)
   dataset = nothing
+  @info "Processing $(file)"
   try
     dataset = generate_dataset(climarr, parsed_args[:dimensions];
       radius=parsed_args[:radius], 

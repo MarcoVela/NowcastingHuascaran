@@ -8,7 +8,7 @@
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/nvidia-cuda:1": {},
 		"ghcr.io/julialang/devcontainer-features/julia:1": {
-			"channel": "release"
+			"channel": "1.9.2"
 		},
 		"ghcr.io/devcontainers/features/conda:1": {},
 		"ghcr.io/iterative/features/dvc:1": {},
