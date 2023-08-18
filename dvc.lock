@@ -56,7 +56,7 @@ stages:
       isexec: true
   grid_dataset:
     cmd:
-    - julia scripts/dataset/grid_fed.jl -s 4 -t 30 -f data/exp_pro/GLM-L2-LCFA/2019.jld2
+    - julia scripts/dataset/grid_fed.jl -s 4 -t 15 -f data/exp_pro/GLM-L2-LCFA/2019.jld2
     deps:
     - path: data/exp_pro/GLM-L2-LCFA/2019.jld2
       md5: 05df9a0f68dc2b8b6c5138baea609f34
@@ -80,23 +80,23 @@ stages:
       params.yaml:
         ds.resolution:
           spatial: 4
-          temporal: 30
+          temporal: 15
     outs:
-    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=30_year=2019
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2019
       hash: md5
-      md5: 7b9d62277c0601ac29e23cdfe4d8be8d.dir
-      size: 89603335
+      md5: c60f6f4c452b865c01cd65dc3d3bfb5a.dir
+      size: 160524600
       nfiles: 12
   cluster_dataset:
     cmd:
-    - julia scripts/dataset/cluster_grid.jl --folder=data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=30_year=2019
+    - julia scripts/dataset/cluster_grid.jl --folder=data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2019
       --threshold=1.0 --binary --radius=3.0 --time_scale=2.0 --windows=5,5,10 --min_neighbors=50
       --min_cluster_size=100 --dimensions=64,64,20 --padding=2,2,4 --single-file=dataset.h5
     deps:
-    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=30_year=2019
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=4_temporal=15_year=2019
       hash: md5
-      md5: 7b9d62277c0601ac29e23cdfe4d8be8d.dir
-      size: 89603335
+      md5: c60f6f4c452b865c01cd65dc3d3bfb5a.dir
+      size: 160524600
       nfiles: 12
     - path: scripts/dataset/cluster_grid.jl
       hash: md5
@@ -122,24 +122,24 @@ stages:
           padding: 2,2,4
         ds.resolution:
           spatial: 4
-          temporal: 30
+          temporal: 15
     outs:
-    - path: data/training/dataset.h5
+    - path: data/training/dataset-4x4x15.h5
       hash: md5
-      md5: 5131c63526b8aecb8af2d3ed94c0224b
-      size: 25245386
+      md5: 1e601ae5bde7c64ae1b34817700b3157
+      size: 27958793
   train:
     cmd:
-    - MLFLOW_EXPERIMENT_NAME=4x4x30-resolution CUDA_VISIBLE_DEVICES=0 julia scripts/training/train.jl
+    - MLFLOW_EXPERIMENT_NAME=4x4x15-resolution CUDA_VISIBLE_DEVICES=0 julia scripts/training/train.jl
       --dataset=type=SequenceFED_splitratio=0.8_batchsize=32_N=10 --dataset_path=data/training/dataset.h5
-      --architecture=type=EncoderForecaster05.2.2_out=10_dropout=0.2 --optimiser="ADAM(;
-      lr=3e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
+      --architecture=type=EncoderForecaster05.2.2_out=10_dropout=0.1 --optimiser="ADAM(;
+      lr=2e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
       --device=gpu --early_stop=10 --plateau=10 --throttle=120
     deps:
-    - path: data/training/dataset.h5
+    - path: data/training/dataset-4x4x15.h5
       hash: md5
-      md5: 5131c63526b8aecb8af2d3ed94c0224b
-      size: 25245386
+      md5: 1e601ae5bde7c64ae1b34817700b3157
+      size: 27958793
     - path: scripts/training/train.jl
       hash: md5
       md5: fbeb0fc28036c7f9a9ae02bd904618b3
@@ -174,13 +174,13 @@ stages:
           arch:
             type: EncoderForecaster05.2.2
             out: 10
-            dropout: 0.2
-          optimiser: ADAM(; lr=3e-4)
+            dropout: 0.1
+          optimiser: ADAM(; lr=2e-4)
           epochs: 100
           loss: binarycrossentropy
     outs:
-    - path: data/experiments/4x4x30-resolution
+    - path: data/experiments/4x4x15-resolution
       hash: md5
-      md5: 55fc26f04bcd8897f02cebb34500cbf2.dir
-      size: 443169549
-      nfiles: 29
+      md5: 015de745d903f3d972c503ef380548bd.dir
+      size: 522306893
+      nfiles: 34

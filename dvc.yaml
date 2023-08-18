@@ -2,7 +2,7 @@ vars:
   - dataset:
       year: '2019'
   - mlflow:
-      experiment_name: '4x4x30-resolution'
+      experiment_name: '4x4x15-resolution'
   - gpu:
       CUDA_VISIBLE_DEVICES: 0
 
@@ -112,7 +112,7 @@ stages:
       - src/utils/logging.jl
       - src/training/train.jl
       - src/evaluation/loss.jl
-      - data/training/dataset.h5
+      - data/training/dataset-${ds.resolution.spatial}x${ds.resolution.spatial}x${ds.resolution.temporal}.h5
     outs:
       - data/experiments/${mlflow.experiment_name}:
           persist: true

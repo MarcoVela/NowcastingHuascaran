@@ -1,5 +1,5 @@
 using Flux
-using Flux: params
+using Flux: params, normalise
 
 include("../layers/TimeDistributed.jl")
 include("../layers/KeepLast.jl")
@@ -36,7 +36,7 @@ function (d::Decoder)(state, x_start, steps)
   d.m.state = state
   r = RecurDecoder(d.m, x_start)
   out = [r() for _ in 1:steps]
-  reshape(reduce(ncat, out), size(out[1])[1:end-1]..., :)
+  normalise(reshape(reduce(ncat, out), size(out[1])[1:end-1]..., :))
 end
 
 Flux.@functor Encoder

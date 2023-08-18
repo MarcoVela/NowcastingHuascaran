@@ -18,10 +18,10 @@ train:
     batchsize: 32
     N: 10
   arch: # Architecture
-    type: EncoderForecaster05.2.2
+    type: EncoderForecaster58
     out: 10
-    dropout: 0.2
-  optimiser: ADAM(; lr=3e-4)
+    dropout: 0.1
+  optimiser: ADAM(; lr=1e-4)
   epochs: 100
   loss: binarycrossentropy
 
