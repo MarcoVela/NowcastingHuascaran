@@ -58,6 +58,7 @@ end
 
 Flux.@functor Seq2Seq
 
+
 function build_model(; out, device, dropout)
   _model = Chain(
     TimeDistributed(
