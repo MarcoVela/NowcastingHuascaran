@@ -2,7 +2,7 @@ vars:
   - dataset:
       year: '2019'
   - mlflow:
-      experiment_name: '4x4x15-resolution'
+      experiment_name: 'final-presentation'
   - gpu:
       CUDA_VISIBLE_DEVICES: 0
 
@@ -80,7 +80,7 @@ stages:
       - src/dataset/cluster_dbscan.jl
       - data/exp_pro/GLM-L2-LCFA-GRID/spatial=${ds.resolution.spatial}_temporal=${ds.resolution.temporal}_year=${dataset.year}
     outs:
-      - data/training/dataset-${ds.resolution.spatial}x${ds.resolution.spatial}x${ds.resolution.temporal}.h5:
+      - data/training/dataset.h5:
           persist: true
           cache: true
     params:
@@ -112,7 +112,7 @@ stages:
       - src/utils/logging.jl
       - src/training/train.jl
       - src/evaluation/loss.jl
-      - data/training/dataset-${ds.resolution.spatial}x${ds.resolution.spatial}x${ds.resolution.temporal}.h5
+      - data/training/dataset.h5
     outs:
       - data/experiments/${mlflow.experiment_name}:
           persist: true

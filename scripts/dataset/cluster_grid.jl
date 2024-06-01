@@ -81,20 +81,14 @@ end
 
 using HDF5
 
-function join_all(folder, fname)
+function join_all(folder, fname; deflate=parsed_args[:compression])
   files = readdir(folder; join=true)
-  ds = Dict()
-  FED = [h5read(f, "FED") for f in files]
-  lon = [h5read(f, "lon") for f in files]
-  lat = [h5read(f, "lat") for f in files]
-  time = [h5read(f, "time") for f in files]
-  ds["FED"] = cat(FED...; dims=4)
-  ds["lon"] = cat(lon...; dims=2)
-  ds["lat"] = cat(lat...; dims=2)
-  ds["time"] = cat(time...; dims=2)
   h5open(fname, "w") do file
-    for (key, val) in ds
-      file[key, deflate=parsed_args[:compression]] = val
+    arr = [h5read(f, "FED") for f in files]
+    file["FED", deflate=deflate] = cat(arr...; dims=4)
+    for k in ("lon", "lat", "time")
+      arr = [h5read(f, k) for f in files]
+      file[k, deflate=deflate] = cat(arr...; dims=2)
     end
   end
 end
@@ -138,7 +132,9 @@ for file in files
       padding=parsed_args[:padding],
     )
   catch e
-    @warn "Skipping" basename(file) e
+    error_msg = sprint(showerror, e)
+    st = sprint((io,v) -> show(io, "text/plain", v), stacktrace(catch_backtrace()))
+    @warn "Skipping $(basename(file)):\n$(error_msg)\n$(st)"
     continue
   end
   _, instance_id, _ = parse_savename(file)

@@ -596,3 +596,9 @@ cython_debug/
 #.idea/
 
 notebooks/*
+.aws
+**/*.tif
+**/*.nc
+**/*.jld2
+
+

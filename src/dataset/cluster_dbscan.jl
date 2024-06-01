@@ -7,7 +7,7 @@ using Dates
 
 
 function climarr_cluster(arr::AbstractArray{T, N}; 
-  radius, min_neighbors, min_cluster_size, t_scale = 1, threshold=zero(T)) where {T,N}
+  radius, min_neighbors, min_cluster_size, t_scale = 1, threshold=one(T)) where {T,N}
   found_idx = findall(>=(threshold), arr)
 
   idx_mat = reinterpret(reshape, Int, found_idx)
@@ -62,7 +62,7 @@ function moving_window(climarr, clusters, dimensions, windows, padding)
   limits = tuple([length(x) for x in dims(climarr)]...)
   bboxes = bbox.(clusters, Ref(padding))
   boxes = expand_bbox.(bboxes, Ref(dimensions), Ref(limits))
-  res = Vector{typeof(climarr[ntuple(_->:, length(dims(climarr)))])}()
+  res = Vector{typeof(climarr[ntuple(_->:, length(dims(climarr)))...])}()
   N = length(dimensions)
   for box in boxes
     ranges = ntuple(i -> begin
@@ -140,8 +140,7 @@ La función `generate_dataset` devolverá un diccionario con 4 entradas:
 - time : una matriz (T×N) que almacena el tiempo en segundos desde el unix epoch como `Float64` de cada elemento en la grilla
 """
 function generate_dataset(climarr::AbstractArray{T, N}, dimensions; 
-  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=zero(T), padding=ntuple(_->0, length(dimensions))) where {T, N}
-
+  radius, min_neighbors, min_cluster_size, t_scale = 1, windows=ntuple(_->0, length(dimensions)), threshold=one(T), padding=ntuple(_->0, length(dimensions))) where {T, N}
   clusters = climarr_cluster(climarr; radius, min_neighbors, min_cluster_size, t_scale, threshold)
   subarrs = moving_window(climarr, clusters, dimensions, windows, padding)
   filter!(arr -> sum(arr) > min_cluster_size, subarrs)
