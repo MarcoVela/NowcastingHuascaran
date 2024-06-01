@@ -21,9 +21,9 @@ function get_dataset(; splitratio, batchsize, N, path, kwargs...)
   end
   @info "rotating dataset"
   Random.seed!(42)
-  rotations = [mapslices(Base.Fix2(rotr90, i), dataset, dims=(1,2)) for i in 1:3]
-  dataset = cat(dataset, cat(rotations..., dims=4), dims=4)
+  dataset = cat(dataset, mapslices(Base.Fix2(rotr90, 1), dataset, dims=(1,2)))
   dataset[:, :, :, shuffle(axes(dataset, 4)), :] = dataset
+  dataset = cat(dataset, mapslices(rot180, dataset, dims=(1,2)))
 
   TOTAL_SAMPLES = size(dataset, 4)
   TOTAL_FRAMES = size(dataset, 5)
