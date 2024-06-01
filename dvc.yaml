@@ -89,8 +89,11 @@ stages:
 
   train:
     cmd:
-      - MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name}
-        CUDA_VISIBLE_DEVICES=${gpu.CUDA_VISIBLE_DEVICES}
+      - export $(grep -v '^#' .env | xargs) &&
+        export MLFLOW_EXPERIMENT_NAME=${mlflow.experiment_name} &&
+        export CUDA_VISIBLE_DEVICES=${gpu.CUDA_VISIBLE_DEVICES} &&
+        git add . && 
+        git commit -m "automatic commit" &&
         julia scripts/training/train.jl
         --dataset=type=${train.ds.type}_splitratio=${train.ds.splitratio}_batchsize=${train.ds.batchsize}_N=${train.ds.N}
         --dataset_path=data/training/dataset.h5
