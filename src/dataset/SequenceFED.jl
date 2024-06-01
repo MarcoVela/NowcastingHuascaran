@@ -24,16 +24,15 @@ function get_dataset(; splitratio, batchsize, N, path, kwargs...)
   ds = dataset
   n = size(ds, 4)
   dataset = zeros(eltype(ds), size(ds)[1:3]..., n*4, size(ds, 5))
-  dataset[:,:,:,1:n,:] = ds
+  idx = shuffle(axes(dataset, 4))
+  dataset[:,:,:,idx[1:n],:] = ds
   Random.seed!(42)
   for i in 1:3
     @info i
-    dataset[:,:,:,n*i+1:n*(i+1),:] = mapslices(Base.Fix2(rotr90, i), ds, dims=(1,2))
+    dataset[:,:,:,idx[n*i+1:n*(i+1)],:] = mapslices(Base.Fix2(rotr90, i), ds, dims=(1,2))
   end
   ds = nothing
   GC.gc()
-  @info "shuffle"
-  dataset[:, :, :, shuffle(axes(dataset, 4)), :] = dataset
 
   TOTAL_SAMPLES = size(dataset, 4)
   TOTAL_FRAMES = size(dataset, 5)
