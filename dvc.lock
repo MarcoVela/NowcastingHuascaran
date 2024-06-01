@@ -130,10 +130,11 @@ stages:
       size: 93888754
   train:
     cmd:
-    - MLFLOW_EXPERIMENT_NAME=final-presentation CUDA_VISIBLE_DEVICES=0 julia scripts/training/train.jl
-      --dataset=type=SequenceFED_splitratio=0.8_batchsize=8_N=10 --dataset_path=data/training/dataset.h5
-      --architecture=type=EncoderForecaster58_out=10_dropout=0.1 --optimiser="ADAM(;
-      lr=1e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
+    - export $(grep -v '^#' .env | xargs) && export MLFLOW_EXPERIMENT_NAME=final-presentation
+      && export CUDA_VISIBLE_DEVICES=0 && git add . && git commit -m "automatic commit"
+      && julia scripts/training/train.jl --dataset=type=SequenceFED_splitratio=0.8_batchsize=16_N=10
+      --dataset_path=data/training/dataset.h5 --architecture=type=EncoderForecaster58_out=10_dropout=0.1
+      --optimiser="ADAM(; lr=1e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
       --device=gpu --early_stop=10 --plateau=10 --throttle=120
     deps:
     - path: data/training/dataset.h5
@@ -149,8 +150,9 @@ stages:
       md5: 6129105c273c08824aff018c5866677e
       size: 2183
     - path: src/dataset/SequenceFED.jl
-      md5: 410f5a20e06120f60625f4d2c1dc3539
-      size: 1367
+      hash: md5
+      md5: cedb6c037153169385bfefc8578b7e33
+      size: 1802
     - path: src/evaluation/loss.jl
       hash: md5
       md5: 3eaedf4ba03c602a193e3df5fb9b3ff1
@@ -171,7 +173,7 @@ stages:
           ds:
             type: SequenceFED
             splitratio: 0.8
-            batchsize: 8
+            batchsize: 16
             N: 10
           arch:
             type: EncoderForecaster58
@@ -183,6 +185,6 @@ stages:
     outs:
     - path: data/experiments/final-presentation
       hash: md5
-      md5: a5e095f70801f8cb1c864f4b1fc94f91.dir
-      size: 205765299
-      nfiles: 14
+      md5: 16d89bb5e2764abdea8e81a3f140c606.dir
+      size: 221634800
+      nfiles: 15
