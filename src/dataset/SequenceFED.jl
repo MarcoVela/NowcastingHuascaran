@@ -1,5 +1,6 @@
 using HDF5
 using DrWatson
+using Random
 
 function read_from_file(path)
   h5read(path, "FED")
@@ -18,6 +19,12 @@ function get_dataset(; splitratio, batchsize, N, path, kwargs...)
   elseif isdir(path)
     dataset = read_from_folder(path)
   end
+  @info "rotating dataset"
+  Random.seed!(42)
+  rotations = [mapslices(Base.Fix2(rotr90, i), dataset, dims=(1,2)) for i in 1:3]
+  dataset = cat(dataset, cat(rotations..., dims=4), dims=4)
+  dataset[:, :, :, shuffle(axes(dataset, 4)), :] = dataset
+
   TOTAL_SAMPLES = size(dataset, 4)
   TOTAL_FRAMES = size(dataset, 5)
   last_train_sample_index = ceil(Int, TOTAL_SAMPLES * splitratio)
