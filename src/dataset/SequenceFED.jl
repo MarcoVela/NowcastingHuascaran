@@ -20,25 +20,29 @@ function get_dataset(; splitratio, batchsize, N, path, kwargs...)
     dataset = read_from_folder(path)
   end
 
-  @info "rotating dataset"
-  ds = dataset
-  n = size(ds, 4)
-  dataset = zeros(eltype(ds), size(ds)[1:3]..., n*4, size(ds, 5))
-  Random.seed!(42)
-  idx = shuffle(axes(dataset, 4))
-  dataset[:,:,:,idx[1:n],:] = ds
-  for i in 1:3
-    @info i
-    dataset[:,:,:,idx[n*i+1:n*(i+1)],:] = mapslices(Base.Fix2(rotr90, i), ds, dims=(1,2))
-  end
-  ds = nothing
-  GC.gc()
-
+  @info "split"
   TOTAL_SAMPLES = size(dataset, 4)
   TOTAL_FRAMES = size(dataset, 5)
   last_train_sample_index = ceil(Int, TOTAL_SAMPLES * splitratio)
   dataset_train = view(dataset, :, :, :, 1:last_train_sample_index, :)
   dataset_test = view(dataset, :, :, :, last_train_sample_index+1:TOTAL_SAMPLES, :)
+
+
+  @info "rotating dataset"
+  ds = dataset_train
+  n = size(ds, 4)
+  dataset_train = zeros(eltype(ds), size(ds)[1:3]..., n*4, size(ds, 5))
+  Random.seed!(42)
+  idx = shuffle(axes(dataset_train, 4))
+  dataset_train[:,:,:,idx[1:n],:] = ds
+  for i in 1:3
+    @info "rotation" i
+    dataset_train[:,:,:,idx[n*i+1:n*(i+1)],:] = mapslices(Base.Fix2(rotr90, i), ds, dims=(1,2))
+  end
+  ds = nothing
+  GC.gc()
+
+
 
   x_train = (copy(view(dataset_train, :, :, :, t:t+batchsize-1, 1:N)) for t in 1:batchsize:size(dataset_train, 4)-batchsize+1)
   y_train = (copy(view(dataset_train, :, :, :, t:t+batchsize-1, N+1:TOTAL_FRAMES)) for t in 1:batchsize:size(dataset_train, 4)-batchsize+1)
