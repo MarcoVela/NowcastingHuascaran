@@ -15,7 +15,7 @@ train:
   ds: # Dataset
     type: SequenceFED
     splitratio: 0.8
-    batchsize: 8
+    batchsize: 16
     N: 10
   arch: # Architecture
     type: EncoderForecaster58
