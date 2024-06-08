@@ -133,8 +133,8 @@ stages:
     - export $(grep -v '^#' .env | xargs) && export MLFLOW_EXPERIMENT_NAME=final-presentation
       && export CUDA_VISIBLE_DEVICES=0 && git add . && git commit -m "automatic commit"
       && julia scripts/training/train.jl --dataset=type=SequenceFED_splitratio=0.8_batchsize=16_N=10
-      --dataset_path=data/training/dataset.h5 --architecture=type=EncoderForecaster58_out=10_dropout=0.1
-      --optimiser="ADAM(; lr=1e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
+      --dataset_path=data/training/dataset.h5 --architecture=type=EncoderForecaster58_out=10_dropout=0.15
+      --optimiser="ADAM(; lr=3e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
       --device=gpu --early_stop=10 --plateau=10 --throttle=120
     deps:
     - path: data/training/dataset.h5
@@ -178,13 +178,13 @@ stages:
           arch:
             type: EncoderForecaster58
             out: 10
-            dropout: 0.1
-          optimiser: ADAM(; lr=1e-4)
+            dropout: 0.15
+          optimiser: ADAM(; lr=3e-4)
           epochs: 100
           loss: binarycrossentropy
     outs:
     - path: data/experiments/final-presentation
       hash: md5
-      md5: 16d89bb5e2764abdea8e81a3f140c606.dir
-      size: 221634800
-      nfiles: 15
+      md5: 7b1e40ef862104b485d4f3db90c60eb0.dir
+      size: 189972600
+      nfiles: 13

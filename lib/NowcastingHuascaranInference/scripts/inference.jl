@@ -1,22 +1,40 @@
-using DrWatson
-@quickactivate
-
 using ProgressMeter
 using Dates
 using Unitful
 using Flux
 using GDAL_jll
+using ArgParse
 
 
-include("../../src/structs/FlashRecords.jl")
-include("../../src/dataset/fed_grid.jl")
-include("../../src/evaluation/load_experiment.jl")
+include("../src/dataset.jl")
+include("../src/utils.jl")
+include("../src/model.jl")
 
-include(srcdir("structs", "FlashRecords.jl"))
-include(srcdir("dataset", "fed_grid.jl"))
-include(srcdir("evaluation", "load_experiment.jl"))
 
-model, _ = load_experiment(datadir("experiments", "final-presentation", "epoch=2.bson"))
+
+s = ArgParseSettings()
+@add_arg_table s begin
+  "--model"
+    help = "Model path"
+    required = true
+
+  "--data_dir"
+    help = "LCFA files path"
+    required = true
+
+  "--output_dir"
+    help = "Prediction output directoy"
+    range_tester = isdir
+    default = "."
+
+  "--stride"
+    help = "Stride for prediction"
+    default = 16
+    arg_type = Int
+end
+
+
+
 
 
 # Fix for Upsample layers not accepting SubArray, instead of view we use 
@@ -45,6 +63,16 @@ end
 function get_start_date_goes_file(fname)
   bname = basename(fname)
   s = length("OR_GLM-L2-LCFA_G16_s") + 1
+  """
+  Docs on scan time
+  s20171671145342: is start of scan time
+  4 digit year
+  3 digit day of year
+  2 digit hour
+  2 digit minute
+  2 digit second
+  1 digit tenth of second
+  """
   l = 4 + 3 + 2 + 2 + 2 + 1
   bname[s:s+l-1]
 end
@@ -79,49 +107,25 @@ function pad_matrix(mat, pad_size)
   return padded_input
 end
 
-function predict_matrix(mat, stride)
-  w = 64
-  padded_input = pad_matrix(mat, 32)
-  m,n,t = size(padded_input)
-  out_matrix = zeros(Float32, m, n, 10)
-  counts = zeros(Float32, m, n)
-  for i in 1:stride:(m-w+1), j in 1:stride:(n-w+1)
-    pred = predict(view(padded_input, i:i+w-1, j:j+w-1, :))
-    out_matrix[i:i+w-1, j:j+w-1, :] += pred
-    counts[i:i+w-1, j:j+w-1, :] .+= 1
-  end
-  y = out_matrix ./ counts
-  y[32+1:end-32, 32+1:end-32, :]
-end
 
-
-
-
-function main()
-
+function main(args)
+  model = BSON.load(args[:model])[:model]
   spatial_resolution = 4u"km"
   temporal_resolution = Minute(15)
-  folder = datadir("exp_raw", "22")
+  folder = args[:data_dir] # datadir("exp_raw", "22")
+  output_folder = args[:output_dir]
 
   model_steps = 10
   W = 64
   stride = 16
 
   start = DateTime(2023, 6, 1)# now(UTC) - Year(1)
-  finish = DateTime(2023, 5, 31)# start - temporal_resolution * model_steps
+  finish = start - temporal_resolution * model_steps # DateTime(2023, 5, 31)# start - temporal_resolution * model_steps
 
+  @info "GOES date" start
   flashes = read_flashes(get_files(folder, finish, start))
   @show length(flashes)
   climarr = generate_climarray(flashes, spatial_resolution, temporal_resolution)
-
-  for t in dims(climarr, Ti)
-    result = ClimArray(floor.(UInt8, min.(1, climarr[Ti=At(t)].data) * (2^8-1)), (dims(climarr, Lon), dims(climarr, Lat)), "ocurrence of flash")
-    tf = tempname() * ".nc"
-    ncwrite(tf, result)
-    GDAL_jll.gdal_translate_exe() do exe
-      run(`$exe -ot Byte $tf ./$(togoesdate(t)).tif`)
-    end
-  end
 
   input_array = Flux.pad_zeros(climarr.data, (W ÷ 2, W ÷ 2, 0))
   m, n, _ = size(input_array)
@@ -147,13 +151,15 @@ function main()
     result = ClimArray(pred_uint[:, :, i], (dims(climarr, Lon), dims(climarr, Lat)), "probability of flash")
     tf = tempname() * ".nc"
     ncwrite(tf, result)
+    out_file = joinpath(output_folder, "GLM-PREDICTED-$(togoesdate(t)).tif")
     GDAL_jll.gdal_translate_exe() do exe
-      run(`$exe -ot Byte $tf ./$(togoesdate(t)).tif`)
+      run(`$exe -ot Byte $tf $out_file`)
     end
   end
 
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-  main()
+  args = parse_args(s; as_symbols=true)
+  main(args)
 end
