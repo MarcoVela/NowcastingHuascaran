@@ -1,12 +1,11 @@
-################################################################################
-#                          DrWatson Project Structure                          #
+#                          DrWatson Project Structure #
 ################################################################################
 
 # Folders to ignore - files may be too large, too many, etc. NOTE: EDIT IF NEEDED.
-data
 videos
 plots
 _research
+dataset
 
 ################################################################################
 #                                  Data files                                  #
@@ -36,8 +35,6 @@ deps/src/
 docs/build/
 docs/site/
 
-# Generated Manifest
-Manifest.toml
 
 ################################################################################
 #                               Jupyter Notebook                               #
@@ -599,3 +596,9 @@ cython_debug/
 #.idea/
 
 notebooks/*
+.aws
+**/*.tif
+**/*.nc
+**/*.jld2
+
+

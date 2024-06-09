@@ -10,8 +10,9 @@ Pages = ["functions.md"]
 ```
 ## Dataset
 ```@docs
-generate_dataset
-read_fed
+build_model
 generate_climarray
+generate_dataset
 ncwrite_compressed
+read_fed
 ```

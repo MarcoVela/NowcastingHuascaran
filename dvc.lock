@@ -1,0 +1,190 @@
+schema: '2.0'
+stages:
+  merge_lcfa_2019:
+    cmd:
+    - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2019
+    deps:
+    - path: scripts/dataset/merge_lcfa.jl
+      md5: b85bf2fa77d5aed5bce3556dc2a58cbf
+      size: 377
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    - path: src/structs/FlashRecords.jl
+      md5: d70788ccd28818f30f0309d419dab1ea
+      size: 1580
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA/2019.jld2
+      md5: 05df9a0f68dc2b8b6c5138baea609f34
+      size: 7893048977
+      isexec: true
+  merge_lcfa_2020:
+    cmd:
+    - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2020
+    deps:
+    - path: scripts/dataset/merge_lcfa.jl
+      md5: b85bf2fa77d5aed5bce3556dc2a58cbf
+      size: 377
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    - path: src/structs/FlashRecords.jl
+      md5: d70788ccd28818f30f0309d419dab1ea
+      size: 1580
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA/2020.jld2
+      md5: d84ac85255a2bcf85eed8f91583af5d9
+      size: 6762022226
+      isexec: true
+  merge_lcfa_2021:
+    cmd:
+    - julia scripts/dataset/merge_lcfa.jl ../GLM-L2-LCFA/2021
+    deps:
+    - path: scripts/dataset/merge_lcfa.jl
+      md5: b85bf2fa77d5aed5bce3556dc2a58cbf
+      size: 377
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    - path: src/structs/FlashRecords.jl
+      md5: d70788ccd28818f30f0309d419dab1ea
+      size: 1580
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA/2021.jld2
+      md5: 08250d1028c96b60ee8211df5af1ec66
+      size: 6905111344
+      isexec: true
+  grid_dataset:
+    cmd:
+    - julia scripts/dataset/grid_fed.jl -s 2 -t 15 -f data/exp_pro/GLM-L2-LCFA/2019.jld2
+    deps:
+    - path: data/exp_pro/GLM-L2-LCFA/2019.jld2
+      md5: 05df9a0f68dc2b8b6c5138baea609f34
+      size: 7893048977
+    - path: data/exp_pro/GLM-L2-LCFA/2020.jld2
+      md5: d84ac85255a2bcf85eed8f91583af5d9
+      size: 6762022226
+    - path: data/exp_pro/GLM-L2-LCFA/2021.jld2
+      md5: 08250d1028c96b60ee8211df5af1ec66
+      size: 6905111344
+    - path: scripts/dataset/grid_fed.jl
+      md5: bf4ee32aad228f41931bdf3e183b9406
+      size: 2937
+    - path: src/dataset/fed_grid.jl
+      md5: e2ea8d10b6b6ae4fe86c679d450cfb4f
+      size: 7430
+    - path: src/dataset/l2_lcfa_merge.jl
+      md5: 12ae176a471818a05744eebc642c2c8f
+      size: 1410
+    params:
+      params.yaml:
+        ds.resolution:
+          spatial: 2
+          temporal: 15
+    outs:
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=2_temporal=15_year=2019
+      hash: md5
+      md5: 76e24ced10d15aaa8f82573b1a5503e2.dir
+      size: 543525179
+      nfiles: 12
+  cluster_dataset:
+    cmd:
+    - julia scripts/dataset/cluster_grid.jl --folder=data/exp_pro/GLM-L2-LCFA-GRID/spatial=2_temporal=15_year=2019
+      --threshold=1.0 --binary --radius=3.0 --time_scale=2.0 --windows=5,5,10 --min_neighbors=32
+      --min_cluster_size=64 --dimensions=64,64,20 --padding=2,2,4 --single-file=dataset.h5
+    deps:
+    - path: data/exp_pro/GLM-L2-LCFA-GRID/spatial=2_temporal=15_year=2019
+      hash: md5
+      md5: 76e24ced10d15aaa8f82573b1a5503e2.dir
+      size: 543525179
+      nfiles: 12
+    - path: scripts/dataset/cluster_grid.jl
+      hash: md5
+      md5: 5118828ac4f0f66310487d3a896aba53
+      size: 4902
+    - path: src/dataset/cluster_dbscan.jl
+      hash: md5
+      md5: ed3818f3b37965dcc0cfc64140ef3361
+      size: 6190
+    - path: src/dataset/fed_grid.jl
+      md5: e2ea8d10b6b6ae4fe86c679d450cfb4f
+      size: 7430
+    params:
+      params.yaml:
+        ds.cluster:
+          threshold: 1.0
+          radius: 3.0
+          min_neighbors: 32
+          min_cluster_size: 64
+          t_scale: 2.0
+          windows: 5,5,10
+          dimensions: 64,64,20
+          padding: 2,2,4
+        ds.resolution:
+          spatial: 2
+          temporal: 15
+    outs:
+    - path: data/training/dataset.h5
+      hash: md5
+      md5: c47dafa5fb54e242b7c50532104ea199
+      size: 93888754
+  train:
+    cmd:
+    - export $(grep -v '^#' .env | xargs) && export MLFLOW_EXPERIMENT_NAME=final-presentation
+      && export CUDA_VISIBLE_DEVICES=0 && git add . && git commit -m "automatic commit"
+      && julia scripts/training/train.jl --dataset=type=SequenceFED_splitratio=0.8_batchsize=16_N=10
+      --dataset_path=data/training/dataset.h5 --architecture=type=EncoderForecaster58_out=10_dropout=0.15
+      --optimiser="ADAM(; lr=3e-4)" --epochs=100 --loss=binarycrossentropy --metrics=mse,csi,binarycrossentropy
+      --device=gpu --early_stop=10 --plateau=10 --throttle=120
+    deps:
+    - path: data/training/dataset.h5
+      hash: md5
+      md5: c47dafa5fb54e242b7c50532104ea199
+      size: 93888754
+    - path: scripts/training/train.jl
+      hash: md5
+      md5: fbeb0fc28036c7f9a9ae02bd904618b3
+      size: 8798
+    - path: src/architecture/EncoderForecaster58.jl
+      hash: md5
+      md5: 6129105c273c08824aff018c5866677e
+      size: 2183
+    - path: src/dataset/SequenceFED.jl
+      hash: md5
+      md5: cedb6c037153169385bfefc8578b7e33
+      size: 1802
+    - path: src/evaluation/loss.jl
+      hash: md5
+      md5: 3eaedf4ba03c602a193e3df5fb9b3ff1
+      size: 1276
+    - path: src/optimisers/optimiser.jl
+      md5: a80d74a68ea389ff145555f3a1e05991
+      size: 1068
+    - path: src/training/train.jl
+      hash: md5
+      md5: adee63101b8d4e42fd972a4211979005
+      size: 1788
+    - path: src/utils/logging.jl
+      md5: 91de169a342a78e4eb8f406f2d9fc2e1
+      size: 835
+    params:
+      params.yaml:
+        train:
+          ds:
+            type: SequenceFED
+            splitratio: 0.8
+            batchsize: 16
+            N: 10
+          arch:
+            type: EncoderForecaster58
+            out: 10
+            dropout: 0.15
+          optimiser: ADAM(; lr=3e-4)
+          epochs: 100
+          loss: binarycrossentropy
+    outs:
+    - path: data/experiments/final-presentation
+      hash: md5
+      md5: 7b1e40ef862104b485d4f3db90c60eb0.dir
+      size: 189972600
+      nfiles: 13

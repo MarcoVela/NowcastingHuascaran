@@ -37,6 +37,6 @@ function get_opt(s::Symbol)
 end
 
 function build_optimiser(opts::AbstractVector)
-  optimisers = [Flux.Optimise.eval(Meta.parse(x)) for x in opts]
+  optimisers = [MyOptimisers.eval(Meta.parse(x)) for x in opts]
   Flux.Optimise.Optimiser(optimisers...)
 end
