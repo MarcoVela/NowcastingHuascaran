@@ -1,14 +1,14 @@
-using ProgressMeter
-using Dates
-using Unitful
-using Flux
-using GDAL_jll
-using ArgParse
+@time using ProgressMeter
+@time using Dates
+@time using Unitful
+@time using Flux
+@time using GDAL_jll
+@time using ArgParse
 
 
-include("../src/dataset.jl")
-include("../src/utils.jl")
-include("../src/model.jl")
+@time include("../src/dataset.jl")
+@time include("../src/utils.jl")
+@time include("../src/model.jl")
 
 
 
@@ -18,7 +18,7 @@ s = ArgParseSettings()
     help = "Model path"
     required = true
 
-  "--data_dir"
+  "--input_dir"
     help = "LCFA files path"
     required = true
 
@@ -31,6 +31,10 @@ s = ArgParseSettings()
     help = "Stride for prediction"
     default = 16
     arg_type = Int
+  
+  "--start_datetime"
+    help = "Start time to collect data"
+    default = string(now(UTC))
 end
 
 
@@ -84,7 +88,7 @@ function get_files(root_folder, time_from, time_to)
   filter!(f -> occursin("OR_GLM-L2-LCFA_G16", f), files)
   start_time = togoesdate(time_from)
   end_time = togoesdate(time_to)
-  @show start_time end_time
+  @info "Filter files by start time" start_time end_time
   filter!(f -> start_time <= get_start_date_goes_file(f) <= end_time, files)  
 end
 
@@ -112,19 +116,19 @@ function main(args)
   model = BSON.load(args[:model])[:model]
   spatial_resolution = 4u"km"
   temporal_resolution = Minute(15)
-  folder = args[:data_dir] # datadir("exp_raw", "22")
+  folder = args[:input_dir] # datadir("exp_raw", "22")
   output_folder = args[:output_dir]
 
   model_steps = 10
   W = 64
-  stride = 16
+  stride = args[:stride]
 
-  start = DateTime(2023, 6, 1)# now(UTC) - Year(1)
+  start = DateTime(args[:start_datetime], dateformat"YYYY-m-dTH:M:S.s") # DateTime(2023, 6, 1)# now(UTC) - Year(1)
   finish = start - temporal_resolution * model_steps # DateTime(2023, 5, 31)# start - temporal_resolution * model_steps
 
-  @info "GOES date" start
+  @info "parameters" start finish model_steps stride temporal_resolution
   flashes = read_flashes(get_files(folder, finish, start))
-  @show length(flashes)
+  @assert length(flashes) > 0 "No data to process"
   climarr = generate_climarray(flashes, spatial_resolution, temporal_resolution)
 
   input_array = Flux.pad_zeros(climarr.data, (W ÷ 2, W ÷ 2, 0))
@@ -144,7 +148,7 @@ function main(args)
     counts[i:i+W-1, j:j+W-1, :] .+= 1
   end
   pred = (pred ./ counts)[W÷2+1:end-W÷2, W÷2+1:end-W÷2, :]
-  time = dims(climarr, Ti)[end]+Minute(15):Minute(15):dims(climarr, Ti)[end]+Minute(15)*10
+  time = dims(climarr, Ti)[end]+temporal_resolution:temporal_resolution:dims(climarr, Ti)[end]+temporal_resolution*model_steps
 
   pred_uint = floor.(UInt8, pred * (2^8-1))
   for (i, t) in enumerate(time)
