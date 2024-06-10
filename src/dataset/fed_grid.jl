@@ -84,7 +84,7 @@ Una grilla 3D rectangular `Float32` es creada con esquinas definidas por `N`, `S
 Se acumula la ocurrencia de Flashes en la grilla, finalmente es transformada en un `ClimArray` con nombre "FED".
 
 """
-function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)
+function generate_climarray(records::AbstractVector{FlashRecords}, s::Quantity, t::Period; N=PERU_N, S=PERU_S, E=PERU_E, W=PERU_W)::ClimArray
   groups = groupby_floor(records, t)
   groups_keys = collect(keys(groups))
   t = Minute(t)

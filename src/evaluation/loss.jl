@@ -1,7 +1,8 @@
 module MyLosses
   import Statistics
   using Flux.Losses
-  using MLJBase: f1score, accuracy
+  using LossFunctions
+  using MLJBase
   using Suppressor
   using OrderedCollections
   using ThreadTools

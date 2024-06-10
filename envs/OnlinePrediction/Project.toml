@@ -1,0 +1,9 @@
+name = "OnlinePrediction"
+uuid = "3c74c727-4905-4bdc-812b-b1b3450625f1"
+authors = ["Marco Vela <mvelar@uni.pe>"]
+version = "0.1.0"
+
+[deps]
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"

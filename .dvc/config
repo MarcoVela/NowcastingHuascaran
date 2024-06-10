@@ -1,0 +1,5 @@
+[core]
+    remote = cloud
+    autostage = true
+['remote "cloud"']
+    url = s3://nowcastinghuascaran

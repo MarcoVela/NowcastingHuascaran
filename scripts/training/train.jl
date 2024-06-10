@@ -1,6 +1,8 @@
 using DrWatson
 @quickactivate
 
+isdirty() && @warn "Dirty repo, commit changes to continue"
+
 using ArgParse
 
 s = ArgParseSettings()
@@ -81,7 +83,7 @@ end
 args = parse_args(s; as_symbols=true)
 loss_name = args[:loss]
 if loss_name ∉ args[:metrics]
-  @warn "Loss function should be monitored as a metric, including"
+  @warn "Loss function should be monitored as a metric, appending to metric list"
   push!(args[:metrics], loss_name)
 end
 
@@ -105,11 +107,19 @@ end
 loss_name = args[:loss]
 batchsize = args[:dataset][:batchsize]
 
-using UUIDs
+using MLFlowClient
 
-const exp_id=string(uuid4())
+experiment_name = get(ENV, "MLFLOW_EXPERIMENT_NAME", missing)
+
+@assert !ismissing(experiment_name) "MLFLOW_EXPERIMENT_NAME is not set"
+@assert Base._hasenv("MLFLOW_TRACKING_PASSWORD") "MLFLOW_TRACKING_PASSWORD is not set"
+@assert Base._hasenv("MLFLOW_TRACKING_URI") "MLFLOW_TRACKING_URI is not set"
+@assert Base._hasenv("MLFLOW_TRACKING_USERNAME") "MLFLOW_TRACKING_USERNAME is not set"
+
+mlf = MLFlow()
+experiment = getorcreateexperiment(mlf, experiment_name)
+const exp_id = string(experiment.experiment_id)
 const model_id = savename((; architecture=architecture_type, dataset=dataset_type))
-const experiment_id = savename((; loss=loss_name, batchsize, opt=optimiser_type, id=exp_id), sort=false)
 
 @info "Including source" architecture_type dataset_type
 
@@ -131,7 +141,6 @@ using Dates
 const loss_f = get_metric(args[:loss])
 
 CUDA.functional(args[:device] == :gpu)
-
 const accel_device = args[:device] == :gpu ? gpu : cpu
 
 @info "Building model"
@@ -147,7 +156,6 @@ println(stdout)
 @info "Obtaining dataset"
 const train_data, test_data = @time get_dataset(; args[:dataset]...)
 
-
 function loss(X, y)
   Flux.reset!(model)
   X_dev = accel_device(X)
@@ -155,13 +163,9 @@ function loss(X, y)
   loss_f(y_pred, y)
 end
 
-const logfile = datadir("models", model_id, experiment_id, "logs.log")
-
 
 const train_sample_x, train_sample_y = first(train_data)
 const test_sample_x, test_sample_y = first(test_data)
-
-
 
 const epoch_losses = Float64[]
 
@@ -174,94 +178,121 @@ const metrics = get_metric.(args[:metrics])
 @info "Time of first gradient"
 CUDA.@time Flux.gradient(loss, train_sample_x, train_sample_y);
 
-ispath(dirname(logfile)) && error("Folder $(dirname(logfile)) must be empty")
-mkpath(dirname(logfile))
-isfile(logfile) && Base.unlink(logfile)
-const logger, close_logger = get_logger(logfile)
-
 train_losses = Vector{Float32}()
 test_losses = Vector{Float32}()
 
-function log_loss(epoch)
-  val_test, exec_time_test = CUDA.@timed loss(test_sample_x, test_sample_y)
-  val_train, exec_time_train = CUDA.@timed loss(train_sample_x, train_sample_y)
-  exec_time = mean((exec_time_test, exec_time_train))
-  push!(train_losses, val_train)
-  push!(test_losses, val_test)
+c = gitdescribe(projectdir())
+
+logfile = datadir("experiments", experiment_name, "logs.log")
+ispath(dirname(logfile)) && Base.rm(dirname(logfile); recursive=true)
+mkpath(dirname(logfile))
+isfile(logfile) && Base.unlink(logfile)
+logger, close_logger = get_logger(logfile)
+
+createrun(mlf, experiment; tags=[Dict("key"=>"mlflow.source.git.commit", "value" => c)]) do active_run
+  experiment_id = active_run.info.run_id
+
+
+  function log_loss(epoch)
+    val_test, exec_time_test = CUDA.@timed loss(test_sample_x, test_sample_y)
+    val_train, exec_time_train = CUDA.@timed loss(train_sample_x, train_sample_y)
+    exec_time = mean((exec_time_test, exec_time_train))
+    push!(train_losses, val_train)
+    push!(test_losses, val_test)
+    Base.with_logger(logger) do 
+      @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
+    end
+    logmetric(mlf, active_run, "train_loss", val_train; step=epoch)
+    logmetric(mlf, active_run, "exec_time", exec_time; step=epoch)
+  end
+
+  logparam(mlf, active_run, Dict(
+    original_args...
+  ))
+
+  if !isnothing(dataset_path)
+    logartifact(mlf, active_run, dataset_path)
+  end
+
   Base.with_logger(logger) do 
-    @info "LOSS_DURING_TRAIN" test_loss=val_test train_loss=val_train epoch exec_time
+    @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
   end
-end
 
-Base.with_logger(logger) do 
-  @info "START_PARAMS" train_size=length(train_data) test_size=length(test_data) original_args...
-end
+  @info "Starting training for $(args[:epochs]) epochs" id=exp_id
 
-@info "Starting training for $(args[:epochs]) epochs" id=exp_id
-
-stop_callbacks = []
-stop_functions = [
-  Flux.early_stopping,
-  Flux.plateau,
-]
-if get!(args, :early_stop, 0) > 0
-  push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
-end
-if get!(args, :plateau, 0) > 0
-  push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf, min_dist=2f-5))
-end
-
-for epoch in 1:args[:epochs]
-  log_loss_cb = throttle(() -> log_loss(epoch), args[:throttle])
-  @info "Training..." epoch
-  trainmode!(model)
-  train_time = CUDA.@elapsed train_single_epoch!(ps, loss, train_data, opt, cb=log_loss_cb)
-  Base.with_logger(logger) do
-    @info "EPOCH_TRAIN" epoch exec_time=train_time
+  stop_callbacks = []
+  stop_functions = [
+    Flux.early_stopping,
+    Flux.plateau,
+  ]
+  if get!(args, :early_stop, 0) > 0
+    push!(stop_callbacks, Flux.early_stopping(test_loss, args[:early_stop]; init_score=Inf))
   end
-  @info "Metrics during train" mean_train_loss=mean(train_losses) mean_test_loss=mean(test_losses)
-
-  @info "Testing..." epoch
-  testmode!(model)
-  metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((accel_device(X), y) for (X,y) in test_data))
-  Flux.reset!(model)
-  original_metrics = deepcopy(metrics_dict)
-  metrics_dict[:test_loss] = metrics_dict[loss_name]
-  push!(epoch_losses, metrics_dict[loss_name])
-  @info "Metrics during test" metrics_dict...
-
-  Base.with_logger(logger) do
-    @info "EPOCH_TEST" epoch exec_time=test_time metrics_dict...
+  if get!(args, :plateau, 0) > 0
+    push!(stop_callbacks, Flux.plateau(test_loss, args[:early_stop]; init_score=Inf, min_dist=2f-5))
   end
-  args_dict = merge(deepcopy(original_args), metrics_dict)
-  args_dict[:model] = cpu(model)
-  args_dict[:epoch] = epoch
-  args_dict[:date] = Dates.now()
-  args_dict[:architecture][:type] = architecture_type
-  args_dict[:dataset][:type] = dataset_type
-  args_dict[:optimiser_type] = optimiser_type
-  args_dict[:id] = exp_id
-  @tag!(args_dict, storepatch=true)
 
-  iteration_id = savename((; epoch, original_metrics...), "bson"; digits=5, sort=false)
+  for epoch in 1:args[:epochs]
+    log_loss_cb = throttle(() -> log_loss(epoch), args[:throttle])
+    @info "Training..." epoch
+    trainmode!(model)
+    train_time = CUDA.@elapsed train_single_epoch!(ps, loss, train_data, opt, cb=log_loss_cb)
+    Base.with_logger(logger) do
+      @info "EPOCH_TRAIN" epoch exec_time=train_time
+    end
+    @info "Metrics during train" mean_train_loss=mean(train_losses) mean_test_loss=mean(test_losses)
+  
+    @info "Testing..." epoch
+    testmode!(model)
+    metrics_dict, test_time = CUDA.@timed metrics_single_epoch(model, metrics, ((accel_device(X), y) for (X,y) in test_data))
+    Flux.reset!(model)
+    original_metrics = deepcopy(metrics_dict)
+    metrics_dict[:test_loss] = metrics_dict[loss_name]
+    push!(epoch_losses, metrics_dict[loss_name])
+    for (k, v) in metrics_dict
+      logmetric(mlf, active_run, k, v; step=epoch)
+    end
+    @info "Metrics during test" metrics_dict...
+  
+    Base.with_logger(logger) do
+      @info "EPOCH_TEST" epoch exec_time=test_time metrics_dict...
+    end
+    args_dict = merge(deepcopy(original_args), metrics_dict)
+    args_dict[:model] = cpu(model)
+    args_dict[:epoch] = epoch
+    args_dict[:date] = Dates.now()
+    args_dict[:architecture][:type] = architecture_type
+    args_dict[:dataset][:type] = dataset_type
+    args_dict[:optimiser_type] = optimiser_type
+    args_dict[:id] = exp_id
+    @tag!(args_dict)
+    iteration_id = savename((; epoch), "bson"; digits=5, sort=false)
+  
+    filename = datadir("experiments", experiment_name, iteration_id)
+    safesave(filename, args_dict)
+    logartifact(mlf, active_run, filename)
 
-  filename = datadir("models", model_id, experiment_id, iteration_id)
-  safesave(filename, args_dict)
-
-  stop_callbacks_result = [callback() for callback in stop_callbacks]
-  if any(stop_callbacks_result)
-    stop_cause = stop_functions[stop_callbacks_result]
-    @info "STOP_TRAIN" epoch stop_cause
-    break
+    stop_callbacks_result = [callback() for callback in stop_callbacks]
+    if any(stop_callbacks_result)
+      stop_cause = stop_functions[stop_callbacks_result]
+      @info "STOP_TRAIN" epoch stop_cause
+      break
+    end
+    empty!(train_losses)
+    empty!(test_losses)
   end
-  empty!(train_losses)
-  empty!(test_losses)
+
+  @info "Finished training" datetime=now()
+
+  Base.with_logger(logger) do 
+    @info "FINISH" 
+  end
+  
+  close_logger()
+
+  logartifact(mlf, active_run, logfile)
+
 end
 
-@info "Finished training" datetime=now()
 
-Base.with_logger(logger) do 
-  @info "FINISH" 
-end
 
-close_logger()

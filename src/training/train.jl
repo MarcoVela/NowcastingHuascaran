@@ -1,6 +1,5 @@
 using Flux
 using Flux.Optimise
-using Flux.Optimise: StopException, SkipException
 using ProgressMeter
 
 const PROGRESS_BAR_LENGTH = 65
@@ -18,13 +17,7 @@ function train_single_epoch!(ps, loss, data, opt; cb=() -> ())
       Flux.update!(opt, ps, gs)
       cb();
     catch ex
-      if ex isa StopException
-        break
-      elseif ex isa SkipException
-        continue
-      else
-        rethrow()
-      end
+      rethrow()
     finally
       ProgressMeter.next!(p)
     end

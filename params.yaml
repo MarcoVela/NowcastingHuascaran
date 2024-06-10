@@ -1,0 +1,28 @@
+ds:
+  resolution:
+    spatial: 2
+    temporal: 15
+  cluster:
+    threshold: 1.0
+    radius: 3.0
+    min_neighbors: 32
+    min_cluster_size: 64
+    t_scale: 2.0
+    windows: 5,5,10
+    dimensions: 64,64,20
+    padding: 2,2,4
+train:
+  ds: # Dataset
+    type: SequenceFED
+    splitratio: 0.8
+    batchsize: 16
+    N: 10
+  arch: # Architecture
+    type: EncoderForecaster58
+    out: 10
+    dropout: 0.15
+  optimiser: ADAM(; lr=3e-4)
+  epochs: 100
+  loss: binarycrossentropy
+
+

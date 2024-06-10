@@ -34,7 +34,7 @@ function get_new_axis(dataset; dimensions, steps)
     if (length(d) - s) % steps[i] !== 0 
       d_size = length(d)
       ax = axs[i]
-      last_ax = last((first(ax):steps[i]:(last(ax)-s)))+s-1
+      last_ax = last((first(ax):steps[i]:(last(ax)-s)))+steps[i]-1
       @warn "DimensionMismatch: Dataset $(d.metadata["standard_name"]) has dimensions $(d_size) but patch size is $(s) and step size is $(steps[i]). Reshaping to $(last_ax)."
       axs = Base.setindex(axs, range(first(ax), last_ax; step=step(ax)), i)
     end
@@ -76,14 +76,18 @@ function join_climarrs(climarrs)
 end
 
 using Flux
+using ProgressMeter
 
 function generate_mosaic(dataset, model; device_in, device_out, dimensions, steps, batchsize)
   axs = get_new_axis(dataset; dimensions, steps)
   grids = collect(generate_grids(dataset, axs; dimensions, steps))
   out_grids = similar(grids)
-  for i in Iterators.partition(1:length(grids), batchsize)
+  @showprogress for i in Iterators.partition(1:length(grids), batchsize)
     Flux.reset!(model)
     out_grids[i] .= predict_climarrs(model, grids[i]; device_in, device_out)
+    for j in i
+      out_grids[j] = out_grids[j][:,:,1:steps[3]]
+    end
   end
   join_climarrs(out_grids)
 end
@@ -120,14 +124,30 @@ function animate_mosaic(climarr, filename)
   tim = dims(climarr, Ti)
   region = [minimum(lon), maximum(lon), minimum(lat), maximum(lat)]
   coast = (;DCW=((country=:PE,pen=(0.5,:white)), (continent=:SA, pen=(.5, :white))), region=region)
-  topo = makecpt(color=(:yellow, :red), range=(.99, 1.01), continuous=false)
-  figures = map(tim) do t
+  topo = makecpt(color=(:yellow, :red), range=(.8, 1), continuous=false)
+  figures = @showprogress map(tim) do t
     G2 = mat2grid(climarr[Ti(At(t))].data', x=lon, y=lat)
     figname=tempname()*".png"
-    basemap(R=region, proj=:guess, show=false)
+    basemap(R=region, proj=:Mercator, show=false)
     grdimage!(G2; color=topo, colorbar=true, coast=coast, show=false, savefig=figname, fmt=:png)
     load(figname)
   end
   save(filename, cat(figures...; dims=Val(3)))
+end
+
+function animate_mosaic_folder(climarr, folder; color=(:yellow, :red))
+  lon = Float64.(dims(climarr, Lon))
+  lat = Float64.(dims(climarr, Lat))
+  tim = dims(climarr, Ti)
+  region = [minimum(lon), maximum(lon), minimum(lat), maximum(lat)]
+  coast = (;DCW=((country=:PE,pen=(0.5,:white)), (continent=:SA, pen=(.5, :white))), region=region)
+  topo = makecpt(color=color, range=(0.1, 2), continuous=true)
+  mkpath(folder)
+  @showprogress map(tim) do t
+    G2 = mat2grid(climarr[Ti(At(t))].data', x=lon, y=lat)
+    figname= joinpath(folder, string(floor(Int, datetime2unix(t))) *".png" )
+    basemap(R=region, proj=:guess, show=false)
+    grdimage!(G2; color=topo, colorbar=true, coast=coast, show=false, savefig=figname, fmt=:png)
+  end;
 end
 

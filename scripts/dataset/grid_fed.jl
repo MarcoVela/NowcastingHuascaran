@@ -67,9 +67,11 @@ monthly_records = group(x -> lpad(month(first(x).time_start), 2, '0'), values(lc
 monthly_records = Dict(keys(monthly_records) .=> collect.(Iterators.flatten.(values(monthly_records))))
 lcfa_merged = nothing
 GC.gc()
+year = String(split(basename(parsed_args[:file]), '.')[1])
 
 resolutions = (; spatial = parsed_args[:spatial], 
-                 temporal = parsed_args[:temporal])
+                 temporal = parsed_args[:temporal],
+                 year = year)
 
 mkpath(datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(resolutions; sort=false)))
 
@@ -82,12 +84,10 @@ for (m, records) in monthly_records
   @info "stats of file $m" number_of_records
 
   fed = generate_climarray(records, spatial_resolution, temporal_resolution; corners...)
-  props = (;  basename = String(split(basename(parsed_args[:file]), '.')[1]),
-              month = m,
+  props = (   month = m,
               compression = parsed_args[:compression],)
 
-
-  out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(resolutions; sort=false), savename(props; sort=false)*".nc")
+  out_path = datadir("exp_pro", "GLM-L2-LCFA-GRID", savename(resolutions; sort=true), savename(props; sort=false)*".nc")
   if ispath(out_path)
     @info "Removing old dataset"
     Base.unlink(out_path)
