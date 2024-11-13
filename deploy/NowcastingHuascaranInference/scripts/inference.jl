@@ -35,6 +35,11 @@ s = ArgParseSettings()
   "--start_datetime"
     help = "Start time to collect data"
     default = string(now(UTC))
+
+  "--include_input_climarray"
+    help = "Input ClimArray"
+    action = :store_true
+    default = false
 end
 
 
@@ -89,7 +94,8 @@ function get_files(root_folder, time_from, time_to)
   start_time = togoesdate(time_from)
   end_time = togoesdate(time_to)
   @info "Filter files by start time" start_time end_time
-  filter!(f -> start_time <= get_start_date_goes_file(f) <= end_time, files)  
+  files = filter!(f -> start_time <= get_start_date_goes_file(f) <= end_time, files)
+  files
 end
 
 
@@ -109,6 +115,15 @@ function pad_matrix(mat, pad_size)
   padded_input = zeros(Float32, m + 2 * pad_size, n + 2 * pad_size, t)
   padded_input[pad_size+1:pad_size+m, pad_size+1:pad_size+n, :] .= mat
   return padded_input
+end
+
+
+function datestring(t)
+  Dates.format(t, "yyyymmdd-HHMMSS")
+end
+
+function to_uint8(arr)
+  floor.(UInt8, clamp.(arr, 0, 1) * (2^8-1))
 end
 
 
@@ -150,14 +165,25 @@ function main(args)
   pred = (pred ./ counts)[W÷2+1:end-W÷2, W÷2+1:end-W÷2, :]
   time = dims(climarr, Ti)[end]+temporal_resolution:temporal_resolution:dims(climarr, Ti)[end]+temporal_resolution*model_steps
 
-  pred_uint = floor.(UInt8, pred * (2^8-1))
+  if args[:include_input_climarray]
+    for (i, t) in enumerate(dims(climarr, Ti))
+      result = ClimArray(to_uint8(climarr.data[:, :, i]), (dims(climarr, Lon), dims(climarr, Lat)), "flash ocurrence")
+      tf = tempname() * ".nc"
+      ncwrite(tf, result)
+      out_file = joinpath(output_folder, "GLM-INPUT-$(datestring(t)).tif")
+      GDAL_jll.gdal_translate_exe() do exe
+        run(`$exe -ot Byte $tf $out_file`, stdin, devnull)
+      end
+    end
+  end
+
   for (i, t) in enumerate(time)
-    result = ClimArray(pred_uint[:, :, i], (dims(climarr, Lon), dims(climarr, Lat)), "probability of flash")
+    result = ClimArray(to_uint8(pred[:, :, i]), (dims(climarr, Lon), dims(climarr, Lat)), "probability of flash")
     tf = tempname() * ".nc"
     ncwrite(tf, result)
-    out_file = joinpath(output_folder, "GLM-PREDICTED-$(togoesdate(t)).tif")
+    out_file = joinpath(output_folder, "GLM-PREDICTED-$(datestring(t)).tif")
     GDAL_jll.gdal_translate_exe() do exe
-      run(`$exe -ot Byte $tf $out_file`)
+      run(`$exe -ot Byte $tf $out_file`, stdin, devnull)
     end
   end
 
